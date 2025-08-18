@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simply Task Manager</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar card">
+      <div class="sidebar-header">
+        <h1>Tasks</h1>
+        <form id="new-task-form" class="row">
+          <input id="new-task-title" type="text" placeholder="Add a task..." autocomplete="off" />
+          <button type="submit" class="btn">+</button>
+        </form>
+      </div>
+      <ul id="task-list" class="task-list"></ul>
+    </aside>
+
+    <main class="main card">
+      <div id="empty-state" class="empty">Select or add a task</div>
+      <section id="task-view" class="task-view hidden">
+        <header class="task-view-header">
+          <h2 id="task-title"></h2>
+          <button id="delete-task" class="btn danger" title="Delete task">Delete</button>
+        </header>
+        <ul id="updates" class="updates"></ul>
+        <form id="new-update-form" class="row">
+          <input id="new-update" type="text" placeholder="Write an update..." autocomplete="off" />
+          <button type="submit" class="btn">Send</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
