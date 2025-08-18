@@ -99,6 +99,14 @@ input[type="text"]:focus{
   background: #0e131a; border:1px solid var(--border); border-radius: 12px; padding: 12px 14px;
 }
 .update time{ color: var(--muted); font-size: 12px; display:block; margin-top:6px; }
+.update.editing{ outline: 2px solid rgba(110,168,254,.35); }
+.update .edit-row{ display:flex; gap:8px; }
+.update .edit-input{
+  flex:1; padding:10px 12px; border-radius: 10px; border:1px solid var(--border); background:#0a0f14; color:var(--text);
+}
+.update .mini-btn{ border:0; padding:8px 10px; border-radius:10px; cursor:pointer; font-weight:600; }
+.update .mini-btn.save{ background: linear-gradient(180deg, var(--accent), var(--accent-2)); color:white; }
+.update .mini-btn.cancel{ background:#0c1118; color:var(--muted); border:1px solid var(--border); }
 
 #new-update-form{ padding: 12px 16px; border-top: 1px solid var(--border); }
 

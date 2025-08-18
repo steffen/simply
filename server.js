@@ -88,6 +88,20 @@ app.post('/api/tasks/:id/updates', (req, res) => {
   res.status(201).json(rowToUpdate(update));
 });
 
+// Edit an update's content
+app.put('/api/updates/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const existing = db.prepare('SELECT * FROM updates WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Update not found' });
+  const { content } = req.body || {};
+  if (!content || typeof content !== 'string' || !content.trim()) {
+    return res.status(400).json({ error: 'Content is required' });
+  }
+  db.prepare('UPDATE updates SET content = ? WHERE id = ?').run(content.trim(), id);
+  const updated = db.prepare('SELECT * FROM updates WHERE id = ?').get(id);
+  res.json(rowToUpdate(updated));
+});
+
 // Delete task (and cascading updates)
 app.delete('/api/tasks/:id', (req, res) => {
   const id = Number(req.params.id);

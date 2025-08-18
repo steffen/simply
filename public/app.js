@@ -16,7 +16,8 @@ const newUpdateInput = $('#new-update');
 
 let state = {
   tasks: [],
-  selectedId: null
+  selectedId: null,
+  currentUpdates: []
 };
 
 function formatDate(iso){
@@ -67,14 +68,22 @@ async function selectTask(id){
 }
 
 function renderUpdates(updates){
+  state.currentUpdates = updates;
   updatesEl.innerHTML = '';
-  updates.forEach(u => {
+  updates.forEach((u) => {
     const li = document.createElement('li');
     li.className = 'update';
+    li.dataset.id = String(u.id);
     li.innerHTML = `
-      <div>${linkify(escapeHtml(u.content))}</div>
+      <div class="update-body">${linkify(escapeHtml(u.content))}</div>
       <time>${formatDate(u.created_at)}</time>
     `;
+    li.addEventListener('click', (e) => {
+      // Avoid triggering when clicking inside buttons/inputs
+      const target = e.target;
+      if (target.closest('button') || target.closest('input')) return;
+      startEditUpdate(u.id);
+    });
     updatesEl.appendChild(li);
   });
 }
@@ -133,6 +142,64 @@ deleteTaskBtn.addEventListener('click', async () => {
   renderTaskList();
   updateEmpty();
 });
+
+async function startEditUpdate(updateId){
+  // Prevent multiple edits at once
+  if (updatesEl.querySelector('.update.editing')) return;
+  const u = state.currentUpdates.find(x => x.id === updateId);
+  if (!u) return;
+  const li = updatesEl.querySelector(`.update[data-id="${updateId}"]`);
+  if (!li) return;
+  li.classList.add('editing');
+  const originalHtml = li.innerHTML;
+  li.innerHTML = '';
+  const row = document.createElement('div');
+  row.className = 'edit-row';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'edit-input';
+  input.value = u.content;
+  input.setAttribute('maxlength', '2000');
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'mini-btn save';
+  saveBtn.textContent = 'Save';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'mini-btn cancel';
+  cancelBtn.textContent = 'Cancel';
+  row.appendChild(input);
+  row.appendChild(saveBtn);
+  row.appendChild(cancelBtn);
+  li.appendChild(row);
+  input.focus();
+
+  const cleanup = () => {
+    li.classList.remove('editing');
+    li.innerHTML = originalHtml;
+  };
+
+  cancelBtn.addEventListener('click', () => cleanup());
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') cleanup();
+    if (e.key === 'Enter') saveBtn.click();
+  });
+  saveBtn.addEventListener('click', async () => {
+    const content = input.value.trim();
+    if (!content) { input.focus(); return; }
+    // Persist change
+    await fetchJSON(`/api/updates/${updateId}`, { method: 'PUT', body: JSON.stringify({ content }) });
+    // Reload updates to reflect server state
+    const updates = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
+    renderUpdates(updates);
+    // If this was the latest update, update sidebar preview
+    if (updates.length && updates[0].id === updateId) {
+      const idx = state.tasks.findIndex(t => t.id === state.selectedId);
+      if (idx >= 0) {
+        state.tasks[idx].latest_update = updates[0].content;
+      }
+      renderTaskList();
+    }
+  });
+}
 
 // Init
 loadTasks().then(() => updateEmpty());
