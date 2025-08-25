@@ -113,6 +113,22 @@ newTaskForm.addEventListener('submit', async (e) => {
   selectTask(task.id);
 });
 
+function autoResize(el){
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 220) + 'px';
+}
+
+// Handle Shift+Enter for newline, Enter to submit
+newUpdateInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    newUpdateForm.requestSubmit();
+  }
+});
+
+newUpdateInput.addEventListener('input', () => autoResize(newUpdateInput));
+autoResize(newUpdateInput);
+
 newUpdateForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!state.selectedId) return;
@@ -130,6 +146,7 @@ newUpdateForm.addEventListener('submit', async (e) => {
   }
   renderTaskList();
   newUpdateInput.value = '';
+  autoResize(newUpdateInput);
   newUpdateInput.focus();
 });
 
@@ -155,9 +172,8 @@ async function startEditUpdate(updateId){
   li.innerHTML = '';
   const row = document.createElement('div');
   row.className = 'edit-row';
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.className = 'edit-input';
+  const input = document.createElement('textarea');
+  input.className = 'edit-textarea';
   input.value = u.content;
   input.setAttribute('maxlength', '2000');
   const saveBtn = document.createElement('button');
@@ -171,6 +187,10 @@ async function startEditUpdate(updateId){
   row.appendChild(cancelBtn);
   li.appendChild(row);
   input.focus();
+  // Auto-size existing content
+  const resize = () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 300) + 'px'; };
+  resize();
+  input.addEventListener('input', resize);
 
   const cleanup = () => {
     li.classList.remove('editing');
@@ -180,7 +200,7 @@ async function startEditUpdate(updateId){
   cancelBtn.addEventListener('click', () => cleanup());
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') cleanup();
-    if (e.key === 'Enter') saveBtn.click();
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveBtn.click(); }
   });
   saveBtn.addEventListener('click', async () => {
     const content = input.value.trim();
