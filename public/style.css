@@ -117,8 +117,8 @@ textarea{ min-height: 46px; max-height: 240px; resize: vertical; width: 100%; li
 }
 .task-item:hover{ background: var(--panel-hover); }
 .task-item.active{ background: var(--panel-active); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-.task-item-title{ font-weight:600; margin:0 0 4px; font-size:13px; color: var(--text-strong); }
-.task-item-preview{ color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.task-item-title{ font-weight:600; margin:0 0 4px; font-size:14px; color: var(--text-strong); }
+.task-item-preview{ color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .main{ display:flex; flex-direction: column; }
 .empty{ margin:auto; color: var(--muted); }
 .hidden{ display:none; }
