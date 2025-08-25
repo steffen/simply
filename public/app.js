@@ -6,6 +6,8 @@ const taskListEl = $('#task-list');
 const newTaskForm = $('#new-task-form');
 const newTaskTitle = $('#new-task-title');
 const deleteTaskBtn = $('#delete-task');
+const markClosedBtn = $('#mark-closed');
+const markWaitingBtn = $('#mark-waiting');
 
 const emptyState = $('#empty-state');
 const taskView = $('#task-view');
@@ -39,7 +41,11 @@ function renderTaskList(){
   taskListEl.innerHTML = '';
   state.tasks.forEach(t => {
     const li = document.createElement('li');
-    li.className = 'task-item' + (t.id === state.selectedId ? ' active' : '');
+  let cls = 'task-item';
+  if (t.closed_at) cls += ' closed';
+  else if (t.waiting_since) cls += ' waiting';
+  if (t.id === state.selectedId) cls += ' active';
+  li.className = cls;
     li.dataset.id = t.id;
     li.innerHTML = `
       <div class="task-item-title">${escapeHtml(t.title)}</div>
@@ -62,6 +68,7 @@ async function selectTask(id){
   updateEmpty();
   const task = state.tasks.find(t => t.id === id);
   taskTitleEl.textContent = task ? task.title : '';
+  updateStatusButtons(task);
   const updates = await fetchJSON(`/api/tasks/${id}/updates`);
   renderUpdates(updates);
   newUpdateInput.focus();
@@ -159,6 +166,50 @@ deleteTaskBtn.addEventListener('click', async () => {
   renderTaskList();
   updateEmpty();
 });
+
+function updateStatusButtons(task){
+  document.body.classList.remove('status-closed', 'status-waiting');
+  markClosedBtn.classList.remove('active');
+  markWaitingBtn.classList.remove('active');
+  if (!task) return;
+  if (task.closed_at) {
+    document.body.classList.add('status-closed');
+    markClosedBtn.classList.add('active');
+  } else if (task.waiting_since) {
+    document.body.classList.add('status-waiting');
+    markWaitingBtn.classList.add('active');
+  }
+}
+
+async function toggleClosed(){
+  if (!state.selectedId) return;
+  const task = state.tasks.find(t => t.id === state.selectedId);
+  const closed = !task.closed_at;
+  const updated = await fetchJSON(`/api/tasks/${state.selectedId}/status`, { method: 'PATCH', body: JSON.stringify({ closed }) });
+  mergeTask(updated);
+  updateStatusButtons(updated);
+  renderTaskList();
+}
+
+async function toggleWaiting(){
+  if (!state.selectedId) return;
+  const task = state.tasks.find(t => t.id === state.selectedId);
+  const waiting = !task.waiting_since;
+  const updated = await fetchJSON(`/api/tasks/${state.selectedId}/status`, { method: 'PATCH', body: JSON.stringify({ waiting }) });
+  mergeTask(updated);
+  updateStatusButtons(updated);
+  renderTaskList();
+}
+
+function mergeTask(updated){
+  const idx = state.tasks.findIndex(t => t.id === updated.id);
+  if (idx >= 0) {
+    state.tasks[idx] = { ...state.tasks[idx], ...updated };
+  }
+}
+
+markClosedBtn.addEventListener('click', toggleClosed);
+markWaitingBtn.addEventListener('click', toggleWaiting);
 
 async function startEditUpdate(updateId){
   // Prevent multiple edits at once

@@ -74,6 +74,9 @@ textarea{ min-height: 44px; max-height: 220px; resize: vertical; width: 100%; }
 .btn:hover{ filter: brightness(1.05); }
 .btn:active{ transform: translateY(1px); }
 .btn.danger{ background: linear-gradient(180deg, #ff7b7b, var(--danger)); }
+.btn.subtle{ background: #0c1118; border:1px solid var(--border); color: var(--muted); font-weight:500; }
+.btn.subtle:hover{ color: var(--text); border-color: var(--accent); }
+.btn.subtle.active{ color: var(--accent); border-color: var(--accent); }
 
 .task-list{ list-style:none; margin:0; padding:8px; overflow:auto; height: calc(100% - 82px); }
 .task-item{
@@ -86,6 +89,10 @@ textarea{ min-height: 44px; max-height: 220px; resize: vertical; width: 100%; }
 .task-item.active{ background: #0c1118; border-color: var(--accent); }
 .task-item-title{ font-weight:600; margin:0 0 6px; }
 .task-item-preview{ color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.task-item.closed{ opacity: .55; position: relative; }
+.task-item.waiting{ border-style: dashed; }
+.task-item.closed .task-item-title::after{ content: ' (closed)'; font-weight:400; color: var(--muted); }
+.task-item.waiting .task-item-title::after{ content: ' (waiting)'; font-weight:400; color: var(--accent); }
 
 .main{ display:flex; flex-direction: column; }
 .empty{ margin:auto; color: var(--muted); }
@@ -94,6 +101,9 @@ textarea{ min-height: 44px; max-height: 220px; resize: vertical; width: 100%; }
 .task-view{ display:flex; flex-direction: column; height: 100%; }
 .task-view-header{ display:flex; align-items:center; justify-content: space-between; padding:16px; border-bottom: 1px solid var(--border); }
 .task-view-header h2{ margin:0; font-size: 18px; }
+.task-actions{ display:flex; gap:8px; align-items:center; }
+body.status-closed #task-title{ text-decoration: line-through; opacity: .75; }
+body.status-waiting #task-title{ text-shadow: 0 0 6px rgba(110,168,254,.4); }
 
 .updates{ list-style:none; margin:0; padding: 12px 16px; overflow:auto; flex:1; display:flex; flex-direction: column; gap:12px; }
 .update{

@@ -33,17 +33,30 @@ CREATE TABLE IF NOT EXISTS updates (
 );
 `);
 
+// Lightweight migration for new status columns
+try {
+  const cols = db.prepare("PRAGMA table_info(tasks)").all().map(c => c.name);
+  if (!cols.includes('closed_at')) {
+    db.prepare('ALTER TABLE tasks ADD COLUMN closed_at DATETIME').run();
+  }
+  if (!cols.includes('waiting_since')) {
+    db.prepare('ALTER TABLE tasks ADD COLUMN waiting_since DATETIME').run();
+  }
+} catch (e) {
+  console.error('Migration error:', e);
+}
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Helpers
-const rowToTask = (row) => ({ id: row.id, title: row.title, created_at: row.created_at });
+const rowToTask = (row) => ({ id: row.id, title: row.title, created_at: row.created_at, closed_at: row.closed_at || null, waiting_since: row.waiting_since || null });
 const rowToUpdate = (row) => ({ id: row.id, task_id: row.task_id, content: row.content, created_at: row.created_at });
 
 // Routes
 // Get all tasks with latest update content preview
 app.get('/api/tasks', (req, res) => {
-  const tasks = db.prepare('SELECT id, title, created_at FROM tasks ORDER BY created_at DESC').all();
+  const tasks = db.prepare('SELECT id, title, created_at, closed_at, waiting_since FROM tasks ORDER BY created_at DESC').all();
   const latestStmt = db.prepare(`
     SELECT content, created_at FROM updates WHERE task_id = ? ORDER BY created_at DESC, id DESC LIMIT 1
   `);
@@ -61,7 +74,7 @@ app.post('/api/tasks', (req, res) => {
     return res.status(400).json({ error: 'Title is required' });
   }
   const info = db.prepare('INSERT INTO tasks (title) VALUES (?)').run(title.trim());
-  const task = db.prepare('SELECT id, title, created_at FROM tasks WHERE id = ?').get(info.lastInsertRowid);
+  const task = db.prepare('SELECT id, title, created_at, closed_at, waiting_since FROM tasks WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json(rowToTask(task));
 });
 
@@ -100,6 +113,35 @@ app.put('/api/updates/:id', (req, res) => {
   db.prepare('UPDATE updates SET content = ? WHERE id = ?').run(content.trim(), id);
   const updated = db.prepare('SELECT * FROM updates WHERE id = ?').get(id);
   res.json(rowToUpdate(updated));
+});
+
+// Update task status (closed / waiting)
+app.patch('/api/tasks/:id/status', (req, res) => {
+  const id = Number(req.params.id);
+  const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  const { closed, waiting } = req.body || {};
+  if (typeof closed !== 'boolean' && typeof waiting !== 'boolean') {
+    return res.status(400).json({ error: 'No status fields provided' });
+  }
+  if (closed && waiting) {
+    return res.status(400).json({ error: 'Task cannot be both closed and waiting' });
+  }
+  const now = new Date().toISOString();
+  let closed_at = task.closed_at;
+  let waiting_since = task.waiting_since;
+  if (typeof closed === 'boolean') {
+    closed_at = closed ? now : null;
+    if (closed) waiting_since = null; // clear waiting if closing
+  }
+  if (typeof waiting === 'boolean') {
+    waiting_since = waiting ? now : null;
+    if (waiting) closed_at = null; // clear closed if waiting
+  }
+  db.prepare('UPDATE tasks SET closed_at = ?, waiting_since = ? WHERE id = ?')
+    .run(closed_at, waiting_since, id);
+  const updated = db.prepare('SELECT id, title, created_at, closed_at, waiting_since FROM tasks WHERE id = ?').get(id);
+  res.json(rowToTask(updated));
 });
 
 // Delete task (and cascading updates)

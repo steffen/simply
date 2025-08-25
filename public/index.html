@@ -24,7 +24,11 @@
       <section id="task-view" class="task-view hidden">
         <header class="task-view-header">
           <h2 id="task-title"></h2>
-          <button id="delete-task" class="btn danger" title="Delete task">Delete</button>
+          <div class="task-actions">
+            <button id="mark-waiting" class="btn subtle" title="Toggle waiting">Waiting</button>
+            <button id="mark-closed" class="btn subtle" title="Toggle closed">Close</button>
+            <button id="delete-task" class="btn danger" title="Delete task">Delete</button>
+          </div>
         </header>
         <ul id="updates" class="updates"></ul>
         <form id="new-update-form" class="row">
