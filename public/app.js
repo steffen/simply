@@ -4,7 +4,6 @@ const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
 const taskListEl = $('#task-list');
 const newTaskForm = $('#new-task-form');
-const newTaskTitle = $('#new-task-title');
 const deleteTaskBtn = $('#delete-task');
 const markClosedBtn = $('#mark-closed');
 const markWaitingBtn = $('#mark-waiting');
@@ -118,11 +117,10 @@ function linkify(text){
 
 newTaskForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const title = newTaskTitle.value.trim();
+  const title = (prompt('Task title?') || '').trim();
   if (!title) return;
   const task = await fetchJSON('/api/tasks', { method: 'POST', body: JSON.stringify({ title }) });
   state.tasks.unshift({ ...task, latest_update: null, latest_at: null });
-  newTaskTitle.value = '';
   renderTaskList();
   selectTask(task.id);
 });
