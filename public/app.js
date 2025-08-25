@@ -121,7 +121,7 @@ function renderUpdates(updates){
     li.addEventListener('click', (e) => {
       // Avoid triggering when clicking inside buttons/inputs
       const target = e.target;
-      if (target.closest('button') || target.closest('input')) return;
+  if (target.closest('button') || target.closest('input') || target.closest('a')) return;
       startEditUpdate(u.id);
     });
     updatesEl.appendChild(li);
