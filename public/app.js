@@ -94,6 +94,7 @@ function updateEmpty(){
 
 async function selectTask(id){
   state.selectedId = id;
+  try { localStorage.setItem('selectedTaskId', String(id)); } catch {}
   renderTaskList();
   updateEmpty();
   const task = state.tasks.find(t => t.id === id);
@@ -194,6 +195,7 @@ deleteTaskBtn.addEventListener('click', async () => {
   await fetchJSON(`/api/tasks/${state.selectedId}`, { method: 'DELETE' });
   state.tasks = state.tasks.filter(t => t.id !== state.selectedId);
   state.selectedId = null;
+  try { localStorage.removeItem('selectedTaskId'); } catch {}
   renderTaskList();
   updateEmpty();
 });
@@ -304,7 +306,28 @@ async function startEditUpdate(updateId){
 }
 
 // Init
-loadTasks().then(() => updateEmpty());
+// Initial load then attempt restoration of previously selected task
+loadTasks().then(() => {
+  let storedId = null;
+  try { storedId = Number(localStorage.getItem('selectedTaskId')) || null; } catch {}
+  if (storedId && state.tasks.some(t => t.id === storedId)) {
+    const task = state.tasks.find(t => t.id === storedId);
+    // Adjust filter so task is visible
+    if (task.closed_at && state.filter !== 'closed') state.filter = 'closed';
+    else if (task.waiting_since && state.filter !== 'waiting') state.filter = 'waiting';
+    else if (!task.closed_at && !task.waiting_since && state.filter !== 'open') state.filter = 'open';
+    // Update filter button classes
+    const filterGroup = $('#task-filters');
+    if (filterGroup) {
+      [...filterGroup.querySelectorAll('.filter-btn')].forEach(b => {
+        b.classList.toggle('active', b.dataset.filter === state.filter);
+      });
+    }
+    selectTask(storedId);
+  } else {
+    updateEmpty();
+  }
+});
 
 // Filter controls
 const filterGroup = $('#task-filters');
