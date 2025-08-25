@@ -3,7 +3,7 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
 const taskListEl = $('#task-list');
-const newTaskForm = $('#new-task-form');
+const newTaskForm = $('#new-task-form'); // now contains only a + button
 const deleteTaskBtn = $('#delete-task');
 const markClosedBtn = $('#mark-closed');
 const markWaitingBtn = $('#mark-waiting');
