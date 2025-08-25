@@ -19,7 +19,8 @@ const newUpdateInput = $('#new-update');
 let state = {
   tasks: [],
   selectedId: null,
-  currentUpdates: []
+  currentUpdates: [],
+  filter: 'open'
 };
 
 function formatDate(iso){
@@ -39,7 +40,13 @@ async function loadTasks(){
 
 function renderTaskList(){
   taskListEl.innerHTML = '';
-  state.tasks.forEach(t => {
+  const filtered = state.tasks.filter(t => {
+    if (state.filter === 'open') return !t.closed_at && !t.waiting_since;
+    if (state.filter === 'waiting') return !!t.waiting_since && !t.closed_at;
+    if (state.filter === 'closed') return !!t.closed_at;
+    return true;
+  });
+  filtered.forEach(t => {
     const li = document.createElement('li');
   let cls = 'task-item';
   if (t.closed_at) cls += ' closed';
@@ -274,3 +281,17 @@ async function startEditUpdate(updateId){
 
 // Init
 loadTasks().then(() => updateEmpty());
+
+// Filter controls
+const filterGroup = $('#task-filters');
+if (filterGroup){
+  filterGroup.addEventListener('click', (e) => {
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    const filter = btn.dataset.filter;
+    if (!filter || filter === state.filter) return;
+    state.filter = filter;
+    [...filterGroup.querySelectorAll('.filter-btn')].forEach(b => b.classList.toggle('active', b === btn));
+    renderTaskList();
+  });
+}

@@ -15,6 +15,11 @@
           <input id="new-task-title" type="text" placeholder="Add a task..." autocomplete="off" />
           <button type="submit" class="btn">+</button>
         </form>
+        <div class="filter-group" id="task-filters" role="tablist" aria-label="Task status filter">
+          <button class="filter-btn active" data-filter="open" aria-selected="true">Open</button>
+          <button class="filter-btn" data-filter="waiting" aria-selected="false">Waiting</button>
+          <button class="filter-btn" data-filter="closed" aria-selected="false">Closed</button>
+        </div>
       </div>
       <ul id="task-list" class="task-list"></ul>
     </aside>
