@@ -114,10 +114,8 @@ function renderUpdates(updates){
     const abs = formatDate(u.created_at);
     const rel = relativeTime(u.created_at);
     li.innerHTML = `
-      <div class="update-row">
-        <div class="update-body">${linkify(escapeHtml(u.content))}</div>
-        <time title="${abs}" datetime="${u.created_at}">${rel}</time>
-      </div>
+      <div class="update-body">${linkify(escapeHtml(u.content))}</div>
+      <time title="${abs}" datetime="${u.created_at}">${rel}</time>
     `;
     li.addEventListener('click', (e) => {
       // Avoid triggering when clicking inside buttons/inputs
