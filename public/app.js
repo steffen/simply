@@ -26,6 +26,30 @@ function formatDate(iso){
   try { return new Date(iso).toLocaleString(); } catch { return iso; }
 }
 
+function relativeTime(iso){
+  try {
+    const now = Date.now();
+    const then = new Date(iso).getTime();
+    const diff = Math.max(0, now - then);
+    const sec = Math.floor(diff/1000);
+    if (sec < 45) return 'just now';
+    if (sec < 90) return 'a minute ago';
+    const min = Math.floor(sec/60);
+    if (min < 45) return `${min}m ago`;
+    if (min < 90) return '1h ago';
+    const hr = Math.floor(min/60);
+    if (hr < 24) return `${hr}h ago`;
+    const day = Math.floor(hr/24);
+    if (day < 7) return `${day}d ago`;
+    const week = Math.floor(day/7);
+    if (week < 5) return `${week}w ago`;
+    const month = Math.floor(day/30);
+    if (month < 12) return `${month}mo ago`;
+    const year = Math.floor(day/365);
+    return `${year}y ago`;
+  } catch { return ''; }
+}
+
 async function fetchJSON(url, options){
   const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
   if (!res.ok) throw new Error(await res.text());
@@ -87,9 +111,13 @@ function renderUpdates(updates){
     const li = document.createElement('li');
     li.className = 'update';
     li.dataset.id = String(u.id);
+    const abs = formatDate(u.created_at);
+    const rel = relativeTime(u.created_at);
     li.innerHTML = `
-      <div class="update-body">${linkify(escapeHtml(u.content))}</div>
-      <time>${formatDate(u.created_at)}</time>
+      <div class="update-row">
+        <div class="update-body">${linkify(escapeHtml(u.content))}</div>
+        <time title="${abs}" datetime="${u.created_at}">${rel}</time>
+      </div>
     `;
     li.addEventListener('click', (e) => {
       // Avoid triggering when clicking inside buttons/inputs
@@ -250,7 +278,7 @@ async function startEditUpdate(updateId){
 
   const cleanup = () => {
     li.classList.remove('editing');
-    li.innerHTML = originalHtml;
+  li.innerHTML = originalHtml;
   };
 
   cancelBtn.addEventListener('click', () => cleanup());
@@ -263,8 +291,8 @@ async function startEditUpdate(updateId){
     if (!content) { input.focus(); return; }
     // Persist change
     await fetchJSON(`/api/updates/${updateId}`, { method: 'PUT', body: JSON.stringify({ content }) });
-    // Reload updates to reflect server state
-    const updates = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
+  // Reload updates to reflect server state
+  const updates = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
     renderUpdates(updates);
     // If this was the latest update, update sidebar preview
     if (updates.length && updates[0].id === updateId) {
@@ -293,3 +321,13 @@ if (filterGroup){
     renderTaskList();
   });
 }
+
+// Refresh relative times every 60 seconds
+setInterval(() => {
+  if (!state.selectedId) return;
+  $$('#updates time').forEach(t => {
+    const iso = t.getAttribute('datetime');
+    if (!iso) return;
+    t.textContent = relativeTime(iso);
+  });
+}, 60000);
