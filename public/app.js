@@ -77,8 +77,13 @@ function renderTaskList(){
   if (t.id === state.selectedId) cls += ' active';
   li.className = cls;
     li.dataset.id = t.id;
+    const rel = t.latest_at ? relativeTime(t.latest_at) : '';
+    const abs = t.latest_at ? formatDate(t.latest_at) : '';
     li.innerHTML = `
-      <div class="task-item-title">${escapeHtml(t.title)}</div>
+      <div class="task-item-line">
+        <div class="task-item-title">${escapeHtml(t.title)}</div>
+        ${t.latest_at ? `<time class="last-update" title="${abs}" datetime="${t.latest_at}">${rel}</time>` : ''}
+      </div>
       <div class="task-item-preview">${t.latest_update ? escapeHtml(t.latest_update) : 'No updates yet'}</div>
     `;
     li.addEventListener('click', () => selectTask(t.id));
@@ -119,9 +124,8 @@ function renderUpdates(updates){
       <time title="${abs}" datetime="${u.created_at}">${rel}</time>
     `;
     li.addEventListener('click', (e) => {
-      // Avoid triggering when clicking inside buttons/inputs
       const target = e.target;
-  if (target.closest('button') || target.closest('input') || target.closest('a')) return;
+      if (target.closest('button') || target.closest('input') || target.closest('a')) return;
       startEditUpdate(u.id);
     });
     updatesEl.appendChild(li);
@@ -344,11 +348,16 @@ if (filterGroup){
 }
 
 // Refresh relative times every 60 seconds
-setInterval(() => {
-  if (!state.selectedId) return;
+function refreshRelativeTimes(){
+  // Update update list times
   $$('#updates time').forEach(t => {
     const iso = t.getAttribute('datetime');
-    if (!iso) return;
-    t.textContent = relativeTime(iso);
+    if (iso) t.textContent = relativeTime(iso);
   });
-}, 60000);
+  // Update task list last-update times
+  $('#task-list') && $$('#task-list time.last-update').forEach(t => {
+    const iso = t.getAttribute('datetime');
+    if (iso) t.textContent = relativeTime(iso);
+  });
+}
+setInterval(refreshRelativeTimes, 60000);

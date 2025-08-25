@@ -119,6 +119,8 @@ textarea{ min-height: 46px; max-height: 240px; resize: vertical; width: 100%; li
 .task-item.active{ background: var(--panel-active); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .task-item-title{ font-weight:600; margin:0 0 4px; font-size:14px; color: var(--text-strong); }
 .task-item-preview{ color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.task-item-line{ display:flex; align-items:center; gap:8px; }
+.task-item-line time.last-update{ margin-left:auto; font-size:11px; color: var(--muted); white-space:nowrap; flex-shrink:0; }
 .main{ display:flex; flex-direction: column; }
 .empty{ margin:auto; color: var(--muted); }
 .hidden{ display:none; }
