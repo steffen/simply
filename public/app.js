@@ -17,6 +17,7 @@ const newUpdateForm = $('#new-update-form');
 const newUpdateInput = $('#new-update');
 const dailyTotalEl = $('#daily-total');
 const collapseBtn = $('#collapse-sidebar');
+const expandFloatBtn = $('#expand-sidebar-float');
 const expandBtn = $('#expand-sidebar');
 
 let state = {
@@ -542,3 +543,52 @@ try {
   if (stored === '1') applySidebarCollapsed(true);
   else applySidebarCollapsed(false);
 } catch{}
+
+// Floating expand button hover logic
+let leftEdgeHoverTimeout = null;
+let expandBtnVisible = false;
+let expandBtnLockedPos = null;
+function handleLeftEdgeMove(e){
+  if (!document.body.classList.contains('sidebar-collapsed')) return;
+  const threshold = 20;
+  const insideEdge = e.clientX <= threshold;
+  if (insideEdge){
+    if (!expandBtnVisible){
+  const size = 34; // button size
+  const half = size / 2;
+  let x = e.clientX - half;
+  let y = e.clientY - half;
+  // Clamp inside viewport
+  x = Math.max(2, Math.min(window.innerWidth - size - 2, x));
+  y = Math.max(2, Math.min(window.innerHeight - size - 2, y));
+      expandBtnLockedPos = { x, y };
+      if (expandFloatBtn){
+        expandFloatBtn.style.left = x + 'px';
+        expandFloatBtn.style.top = y + 'px';
+        expandFloatBtn.classList.add('hover-visible');
+      }
+      expandBtnVisible = true;
+    }
+    if (leftEdgeHoverTimeout){ clearTimeout(leftEdgeHoverTimeout); leftEdgeHoverTimeout = null; }
+  } else if (expandBtnVisible){
+    // Start hide timer only if pointer is not over button
+    if (expandFloatBtn && e.target === expandFloatBtn) return;
+    if (leftEdgeHoverTimeout) clearTimeout(leftEdgeHoverTimeout);
+    leftEdgeHoverTimeout = setTimeout(() => {
+      if (expandFloatBtn){ expandFloatBtn.classList.remove('hover-visible'); }
+      expandBtnVisible = false;
+      expandBtnLockedPos = null;
+    }, 350);
+  }
+}
+window.addEventListener('mousemove', handleLeftEdgeMove, { passive:true });
+expandFloatBtn && expandFloatBtn.addEventListener('mouseleave', () => {
+  if (!document.body.classList.contains('sidebar-collapsed')) return;
+  if (leftEdgeHoverTimeout) clearTimeout(leftEdgeHoverTimeout);
+  leftEdgeHoverTimeout = setTimeout(() => {
+    if (expandFloatBtn){ expandFloatBtn.classList.remove('hover-visible'); }
+    expandBtnVisible = false;
+    expandBtnLockedPos = null;
+  }, 250);
+});
+expandFloatBtn && expandFloatBtn.addEventListener('click', () => applySidebarCollapsed(false));
