@@ -156,8 +156,9 @@ function renderUpdates(items){
       const startAbs = formatDate(item.start_at);
       const relStart = relativeTime(item.start_at);
       const duration = running ? liveDuration(item.start_at) : formatDuration(item.duration_seconds || 0);
+  const leftInitial = running ? computeNextHourLabel() : '';
       li.innerHTML = `
-        <div class="te-line"><time title="${startAbs}" datetime="${item.start_at}">${relStart}</time><span class="te-sep">→</span><span class="te-duration" data-start="${item.start_at}" data-running="${running}">${duration}</span>${running ? `<span class="te-left" data-start="${item.start_at}"></span>` : ''}<button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
+        <div class="te-line"><time title="${startAbs}" datetime="${item.start_at}">${relStart}</time><span class="te-sep">→</span><span class="te-duration" data-start="${item.start_at}" data-running="${running}">${duration}</span>${running ? `<span class=\"te-left\" data-start=\"${item.start_at}\">${leftInitial}</span>` : ''}<button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
       `;
       const delBtn = li.querySelector('.te-delete');
       delBtn.addEventListener('click', async (e) => {
@@ -182,6 +183,23 @@ function liveDuration(startIso){
   return formatDuration(Math.floor(diff/1000));
 }
 
+function computeNextHourLabel(){
+  const now = new Date();
+  const mins = now.getMinutes();
+  const minsLeft = (60 - mins) % 60 || 60; // 60 when exactly on the hour
+  const nextHourDate = new Date(now);
+  if (mins === 0) {
+    // already at full hour, show current hour as target
+    nextHourDate.setMinutes(0,0,0);
+  } else {
+    nextHourDate.setHours(now.getHours() + 1, 0, 0, 0);
+  }
+  let h = nextHourDate.getHours();
+  const suffix = h >= 12 ? 'pm' : 'am';
+  h = h % 12; if (h === 0) h = 12;
+  return `· ${minsLeft}m → ${h}${suffix}`;
+}
+
 function formatDuration(sec){
   if (sec < 60) return '<1m';
   const totalMin = Math.floor(sec/60);
@@ -197,14 +215,9 @@ function tickRunning(){
     if (start) span.textContent = liveDuration(start);
   });
   $$('.time-entry.running .te-left').forEach(span => {
-    const start = span.getAttribute('data-start');
-    if (!start) return;
-    const startMs = parseServerDate(start)?.getTime();
-    if (!startMs) return;
-    const elapsedSec = Math.floor((Date.now() - startMs)/1000);
-    const toHour = 3600 - (elapsedSec % 3600);
-    const minsLeft = Math.ceil(toHour/60);
-    span.textContent = `· ${minsLeft}m to hour`;
+  const start = span.getAttribute('data-start');
+  if (!start) return;
+  span.textContent = computeNextHourLabel();
   });
 }
 
