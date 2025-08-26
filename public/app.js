@@ -152,14 +152,25 @@ function renderUpdates(items){
       if (running) hasRunning = true;
       li.className = 'time-entry' + (running ? ' running' : '');
       li.dataset.id = 'te-' + item.id;
+      li.dataset.entryId = item.id;
       const startAbs = formatDate(item.start_at);
       const endAbs = item.end_at ? formatDate(item.end_at) : '';
       const rangeText = item.end_at ? `${startAbs} → ${endAbs}` : `${startAbs} → ...`;
       const duration = running ? liveDuration(item.start_at) : formatDuration(item.duration_seconds || 0);
       li.innerHTML = `
-        <div class="te-header"><span>${running ? '⏱ Running' : '🕒 Tracked'}</span><span class="te-duration" data-start="${item.start_at}" data-running="${running}">${duration}</span></div>
+        <div class="te-header"><span>${running ? '⏱ Running' : '🕒 Tracked'}</span><span class="te-duration" data-start="${item.start_at}" data-running="${running}">${duration}</span><button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
         <div class="te-range">${rangeText}</div>
       `;
+      const delBtn = li.querySelector('.te-delete');
+      delBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm('Delete this time entry?')) return;
+        try {
+          await fetchJSON(`/api/time_entries/${item.id}`, { method: 'DELETE' });
+          const refreshed = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
+          renderUpdates(refreshed);
+        } catch(err){ console.error(err); }
+      });
       updatesEl.appendChild(li);
     }
   });

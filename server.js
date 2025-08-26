@@ -136,6 +136,15 @@ app.post('/api/tasks/:id/time/stop', (req, res) => {
   res.json({ type: 'time', ...rowToTimeEntry(entry), created_at: entry.end_at });
 });
 
+// Delete a time entry
+app.delete('/api/time_entries/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const existing = db.prepare('SELECT * FROM time_entries WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+  db.prepare('DELETE FROM time_entries WHERE id = ?').run(id);
+  res.json({ ok: true });
+});
+
 // Add update to task
 app.post('/api/tasks/:id/updates', (req, res) => {
   const id = Number(req.params.id);
