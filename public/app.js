@@ -7,7 +7,7 @@ const newTaskForm = $('#new-task-form'); // now contains only a + button
 const deleteTaskBtn = $('#delete-task');
 const markClosedBtn = $('#mark-closed');
 const markWaitingBtn = $('#mark-waiting');
-const timeTrackBtn = $('#time-track');
+// Timer control moved into updates list (start row + stop inside running entry)
 
 const emptyState = $('#empty-state');
 const taskView = $('#task-view');
@@ -164,7 +164,7 @@ function renderUpdates(items){
   const duration = running ? liveDuration(item.start_at) : formatDuration(item.duration_seconds || 0);
       if (running) {
         li.innerHTML = `
-          <div class="te-line"><span class="te-duration" data-start="${item.start_at}" data-running="true">${duration}</span><button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
+          <div class="te-line"><span class="te-duration" data-start="${item.start_at}" data-running="true">${duration}</span><button class="stop-btn" title="Stop timer" aria-label="Stop timer">Stop</button><button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
         `;
       } else {
         li.innerHTML = `
@@ -192,10 +192,36 @@ function renderUpdates(items){
           } catch(err){ console.error(err); }
         });
       }
+      if (running) {
+        const stopBtn = li.querySelector('.stop-btn');
+        stopBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          try {
+            await fetchJSON(`/api/tasks/${state.selectedId}/time/stop`, { method: 'POST' });
+            const refreshed = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
+            renderUpdates(refreshed);
+          } catch(err){ console.error(err); }
+        });
+      }
       updatesEl.appendChild(li);
     }
   });
-  updateTimeTrackButton(hasRunning);
+  if (!hasRunning) {
+    // Inject start timer row at top
+    const li = document.createElement('li');
+    li.className = 'start-timer-row';
+    li.innerHTML = `<button type="button" class="start-timer-btn" aria-label="Start timer" title="Start timer">Start Timer</button>`;
+    const btn = li.querySelector('.start-timer-btn');
+    btn.addEventListener('click', async () => {
+      if (!state.selectedId) return;
+      try {
+        await fetchJSON(`/api/tasks/${state.selectedId}/time/start`, { method: 'POST' });
+        const refreshed = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
+        renderUpdates(refreshed);
+      } catch(err){ console.error(err); }
+    });
+    updatesEl.prepend(li);
+  }
   ensureTicking(hasRunning);
 }
 
@@ -264,12 +290,7 @@ function ensureTicking(hasRunning){
   }
 }
 
-function updateTimeTrackButton(running){
-  if (!timeTrackBtn) return;
-  timeTrackBtn.classList.toggle('running', running);
-  timeTrackBtn.textContent = running ? 'Stop' : 'Time';
-  timeTrackBtn.title = running ? 'Stop timer' : 'Start time tracking';
-}
+// Header time track button removed; start/stop now inline
 
 function escapeHtml(str){
   return str
@@ -385,19 +406,7 @@ function mergeTask(updated){
 
 markClosedBtn.addEventListener('click', toggleClosed);
 markWaitingBtn.addEventListener('click', toggleWaiting);
-timeTrackBtn && timeTrackBtn.addEventListener('click', async () => {
-  if (!state.selectedId) return;
-  const running = state.currentUpdates.some(e => e.type === 'time' && e.running);
-  try {
-    if (running) {
-      await fetchJSON(`/api/tasks/${state.selectedId}/time/stop`, { method: 'POST' });
-    } else {
-      await fetchJSON(`/api/tasks/${state.selectedId}/time/start`, { method: 'POST' });
-    }
-    const entries = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
-    renderUpdates(entries);
-  } catch(e){ console.error(e); }
-});
+// Old header time-track button logic removed
 
 async function startEditUpdate(updateId){
   // Prevent multiple edits at once
