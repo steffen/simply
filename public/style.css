@@ -96,6 +96,8 @@ body:not(.sidebar-collapsed) .expand-sidebar-float{ display:none; }
 .sidebar-header-top{ display:flex; align-items:flex-start; justify-content: space-between; gap:12px; }
 .sidebar-header-top .icon-btn{ align-self:flex-start; }
 .sidebar-header-title{ display:flex; flex-direction:column; gap:2px; }
+.header-actions{ display:flex; align-items:flex-start; gap:8px; margin-left:auto; }
+.header-actions form{ margin:0; }
 .btn.icon-btn{ width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:600; padding:0; }
 .btn.icon-btn:hover{ background: var(--panel-hover); }
 .btn.icon-btn:active{ background: var(--panel-active); }
