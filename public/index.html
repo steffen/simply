@@ -11,7 +11,10 @@
     <aside class="sidebar card">
       <div class="sidebar-header">
         <div class="sidebar-header-top">
-          <h1>Tasks</h1>
+          <div class="sidebar-header-title">
+            <h1>Tasks</h1>
+            <div id="daily-total" class="daily-total" aria-live="polite" title="Total tracked time today"></div>
+          </div>
           <form id="new-task-form" autocomplete="off">
             <button type="submit" class="btn icon-btn" title="Add task" aria-label="Add task">+</button>
           </form>
@@ -21,7 +24,6 @@
           <button class="filter-btn" data-filter="waiting" aria-selected="false">Waiting</button>
           <button class="filter-btn" data-filter="closed" aria-selected="false">Closed</button>
         </div>
-  <div id="daily-total" class="daily-total" aria-live="polite" title="Total tracked time today"></div>
       </div>
       <ul id="task-list" class="task-list"></ul>
     </aside>
