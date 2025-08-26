@@ -161,6 +161,7 @@ body.status-waiting #task-title{ text-shadow: 0 0 6px rgba(110,168,254,.4); }
 .time-entry time{ color: var(--muted); font-size:12px; }
 .time-entry .te-duration{ font-weight:600; color: var(--text-strong); font-size:12px; font-family: var(--mono); }
 .time-entry .te-sep{ color: var(--muted); font-size:11px; }
+.time-entry .te-left{ color: var(--muted); font-size:11px; margin-left:8px; }
 .time-entry .te-delete{ opacity:0; margin-left:6px; background:#2d3540; border:1px solid var(--border); color: var(--muted); font-size:11px; padding:2px 6px; border-radius: var(--radius); cursor:pointer; transition: var(--transition); }
 .time-entry:hover .te-delete{ opacity:1; }
 .time-entry .te-delete:hover{ background:#3a444f; color: var(--text); }

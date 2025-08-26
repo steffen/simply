@@ -157,7 +157,7 @@ function renderUpdates(items){
       const relStart = relativeTime(item.start_at);
       const duration = running ? liveDuration(item.start_at) : formatDuration(item.duration_seconds || 0);
       li.innerHTML = `
-        <div class="te-line"><time title="${startAbs}" datetime="${item.start_at}">${relStart}</time><span class="te-sep">→</span><span class="te-duration" data-start="${item.start_at}" data-running="${running}">${duration}</span><button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
+        <div class="te-line"><time title="${startAbs}" datetime="${item.start_at}">${relStart}</time><span class="te-sep">→</span><span class="te-duration" data-start="${item.start_at}" data-running="${running}">${duration}</span>${running ? `<span class="te-left" data-start="${item.start_at}"></span>` : ''}<button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
       `;
       const delBtn = li.querySelector('.te-delete');
       delBtn.addEventListener('click', async (e) => {
@@ -195,6 +195,16 @@ function tickRunning(){
   $$('.time-entry.running .te-duration').forEach(span => {
     const start = span.getAttribute('data-start');
     if (start) span.textContent = liveDuration(start);
+  });
+  $$('.time-entry.running .te-left').forEach(span => {
+    const start = span.getAttribute('data-start');
+    if (!start) return;
+    const startMs = parseServerDate(start)?.getTime();
+    if (!startMs) return;
+    const elapsedSec = Math.floor((Date.now() - startMs)/1000);
+    const toHour = 3600 - (elapsedSec % 3600);
+    const minsLeft = Math.ceil(toHour/60);
+    span.textContent = `· ${minsLeft}m to hour`;
   });
 }
 
