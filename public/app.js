@@ -158,7 +158,7 @@ function renderUpdates(items){
       const duration = running ? liveDuration(item.start_at) : formatDuration(item.duration_seconds || 0);
   const leftInitial = running ? computeNextHourLabel() : '';
       li.innerHTML = `
-        <div class="te-line"><time title="${startAbs}" datetime="${item.start_at}">${relStart}</time><span class="te-sep">→</span><span class="te-duration" data-start="${item.start_at}" data-running="${running}">${duration}</span>${running ? `<span class=\"te-left\" data-start=\"${item.start_at}\">${leftInitial}</span>` : ''}<button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
+        <div class="te-line"><time title="${startAbs}" datetime="${item.start_at}">${relStart}</time><span class="te-sep">→</span><span class="te-duration" data-start="${item.start_at}" data-running="${running}">${duration}</span>${running ? `<span class=\"te-left\" data-start=\"${item.start_at}\">${leftInitial}</span>` : ''}${!running ? `<button class=\"te-trim\" title=\"Trim 15m from end\" aria-label=\"Trim 15 minutes\">−15m</button>` : ''}<button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
       `;
       const delBtn = li.querySelector('.te-delete');
       delBtn.addEventListener('click', async (e) => {
@@ -170,6 +170,17 @@ function renderUpdates(items){
           renderUpdates(refreshed);
         } catch(err){ console.error(err); }
       });
+      if (!running) {
+        const trimBtn = li.querySelector('.te-trim');
+        trimBtn && trimBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          try {
+            await fetchJSON(`/api/time_entries/${item.id}/trim`, { method: 'POST', body: JSON.stringify({ seconds: 900 }) });
+            const refreshed = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
+            renderUpdates(refreshed);
+          } catch(err){ console.error(err); }
+        });
+      }
       updatesEl.appendChild(li);
     }
   });

@@ -165,6 +165,9 @@ body.status-waiting #task-title{ text-shadow: 0 0 6px rgba(110,168,254,.4); }
 .time-entry .te-delete{ opacity:0; margin-left:6px; background:#2d3540; border:1px solid var(--border); color: var(--muted); font-size:11px; padding:2px 6px; border-radius: var(--radius); cursor:pointer; transition: var(--transition); }
 .time-entry:hover .te-delete{ opacity:1; }
 .time-entry .te-delete:hover{ background:#3a444f; color: var(--text); }
+.time-entry .te-trim{ opacity:0; margin-left:4px; background:#2a3039; border:1px solid var(--border); color: var(--muted); font-size:11px; padding:2px 6px; border-radius: var(--radius); cursor:pointer; transition: var(--transition); }
+.time-entry:hover .te-trim{ opacity:1; }
+.time-entry .te-trim:hover{ background:#37404a; color: var(--text); }
 .btn.subtle.running{ background:#13341e; color: var(--success); border-color: var(--success); }
 
 .filter-group{ display:flex; gap:0; margin-top:12px; border:1px solid var(--border); border-radius: var(--radius); overflow:hidden; }

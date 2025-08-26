@@ -145,6 +145,32 @@ app.delete('/api/time_entries/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// Trim time off the end of a completed time entry (default 15m)
+app.post('/api/time_entries/:id/trim', (req, res) => {
+  const id = Number(req.params.id);
+  const entry = db.prepare('SELECT * FROM time_entries WHERE id = ?').get(id);
+  if (!entry) return res.status(404).json({ error: 'Not found' });
+  if (!entry.end_at) return res.status(400).json({ error: 'Cannot trim a running time entry' });
+  const seconds = Number(req.body && req.body.seconds) || 900; // default 15m
+  if (seconds <= 0) return res.status(400).json({ error: 'seconds must be > 0' });
+  const parseDb = (s) => {
+    if (!s) return null;
+    if (/T.*(Z|[+-]\d\d:?\d\d)$/.test(s)) return new Date(s);
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) return new Date(s.replace(' ', 'T') + 'Z');
+    return new Date(s);
+  };
+  const startDate = parseDb(entry.start_at);
+  const endDate = parseDb(entry.end_at);
+  if (!startDate || !endDate) return res.status(500).json({ error: 'Corrupt timestamps' });
+  let newEndMs = endDate.getTime() - seconds * 1000;
+  if (newEndMs < startDate.getTime()) newEndMs = startDate.getTime();
+  const newEnd = new Date(newEndMs).toISOString();
+  const newDuration = Math.floor((newEndMs - startDate.getTime()) / 1000);
+  db.prepare('UPDATE time_entries SET end_at = ?, duration_seconds = ? WHERE id = ?').run(newEnd, newDuration, id);
+  const updated = db.prepare('SELECT * FROM time_entries WHERE id = ?').get(id);
+  res.json({ type: 'time', ...rowToTimeEntry(updated), created_at: updated.end_at });
+});
+
 // Add update to task
 app.post('/api/tasks/:id/updates', (req, res) => {
   const id = Number(req.params.id);
