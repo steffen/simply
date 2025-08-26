@@ -183,12 +183,12 @@ function liveDuration(startIso){
 }
 
 function formatDuration(sec){
-  const h = Math.floor(sec/3600);
-  const m = Math.floor((sec % 3600)/60);
-  const s = sec % 60;
-  if (h) return `${h}h ${m}m ${s}s`;
-  if (m) return `${m}m ${s}s`;
-  return `${s}s`;
+  if (sec < 60) return '<1m';
+  const totalMin = Math.floor(sec/60);
+  const h = Math.floor(totalMin/60);
+  const m = totalMin % 60;
+  if (h === 0) return `${totalMin}m`;
+  return `${h}h${m ? ' ' + m + 'm' : ''}`;
 }
 
 function tickRunning(){
@@ -200,7 +200,7 @@ function tickRunning(){
 
 function ensureTicking(hasRunning){
   if (hasRunning && !state.tickingInterval){
-    state.tickingInterval = setInterval(tickRunning, 1000);
+    state.tickingInterval = setInterval(tickRunning, 60000); // update every minute
   } else if (!hasRunning && state.tickingInterval){
     clearInterval(state.tickingInterval);
     state.tickingInterval = null;
