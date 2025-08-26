@@ -154,7 +154,7 @@ textarea{ min-height: 46px; max-height: 240px; resize: vertical; width: 100%; li
 .updates > * + *{ margin-top:12px; }
 /* Tighter spacing specifically between consecutive time entries */
 .updates > .time-entry + .time-entry{ margin-top:4px; }
-.update{ background: var(--panel-2); border:1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; }
+.update{ background: var(--panel-2); border:1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 12px; }
 .update time{ color: var(--muted); font-size: 12px; display:block; margin-top:6px; line-height:1.3; }
 .update.editing{ outline: 2px solid rgba(110,168,254,.35); }
 .update .edit-row{ display:flex; gap:8px; }
