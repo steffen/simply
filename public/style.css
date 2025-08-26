@@ -174,8 +174,8 @@ textarea{ min-height: 46px; max-height: 240px; resize: vertical; width: 100%; li
 .task-actions{ display:flex; gap:8px; align-items:center; }
 body.status-closed #task-title{ text-decoration: line-through; opacity: .75; }
 body.status-waiting #task-title{ text-shadow: 0 0 6px rgba(110,168,254,.4); }
-.time-entry{ background:#1d2530; border:1px solid var(--border); padding:8px 12px; border-radius: var(--radius-lg); font-size:12px; display:flex; }
-.time-entry.running{ box-shadow: inset 0 0 0 1px rgba(35,134,54,0.35); }
+.time-entry{ background:transparent; border:none; padding:8px 12px; border-radius: var(--radius-lg); font-size:12px; display:flex; }
+.time-entry.running{ background:#1d2530; border:1px solid var(--border); box-shadow: inset 0 0 0 1px rgba(35,134,54,0.35); }
 .time-entry .te-line{ display:flex; align-items:center; gap:10px; width:100%; }
 .time-entry time{ color: var(--muted); font-size:12px; }
 .time-entry .te-duration{ font-weight:600; color: var(--text-strong); font-size:12px; font-family: var(--mono); }
