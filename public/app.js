@@ -154,12 +154,10 @@ function renderUpdates(items){
       li.dataset.id = 'te-' + item.id;
       li.dataset.entryId = item.id;
       const startAbs = formatDate(item.start_at);
-      const endAbs = item.end_at ? formatDate(item.end_at) : '';
-      const rangeText = item.end_at ? `${startAbs} → ${endAbs}` : `${startAbs} → ...`;
+      const relStart = relativeTime(item.start_at);
       const duration = running ? liveDuration(item.start_at) : formatDuration(item.duration_seconds || 0);
       li.innerHTML = `
-        <div class="te-header"><span>${running ? '⏱ Running' : '🕒 Tracked'}</span><span class="te-duration" data-start="${item.start_at}" data-running="${running}">${duration}</span><button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
-        <div class="te-range">${rangeText}</div>
+        <div class="te-line"><time title="${startAbs}" datetime="${item.start_at}">${relStart}</time><span class="te-sep">→</span><span class="te-duration" data-start="${item.start_at}" data-running="${running}">${duration}</span><button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
       `;
       const delBtn = li.querySelector('.te-delete');
       delBtn.addEventListener('click', async (e) => {
