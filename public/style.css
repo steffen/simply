@@ -155,6 +155,12 @@ textarea{ min-height: 46px; max-height: 240px; resize: vertical; width: 100%; li
 .task-actions{ display:flex; gap:8px; align-items:center; }
 body.status-closed #task-title{ text-decoration: line-through; opacity: .75; }
 body.status-waiting #task-title{ text-shadow: 0 0 6px rgba(110,168,254,.4); }
+.time-entry{ background:#1d2530; border:1px solid var(--border); border-left:4px solid var(--accent); padding:10px 12px; border-radius: var(--radius-lg); }
+.time-entry.running{ border-left-color: var(--success); box-shadow: 0 0 0 1px rgba(35,134,54,0.4); }
+.time-entry .te-header{ display:flex; align-items:center; gap:8px; font-size:13px; color: var(--muted); }
+.time-entry .te-duration{ margin-left:auto; font-weight:600; color: var(--text-strong); }
+.time-entry .te-range{ font-size:11px; color: var(--muted); margin-top:4px; }
+.btn.subtle.running{ background:#13341e; color: var(--success); border-color: var(--success); }
 
 .filter-group{ display:flex; gap:0; margin-top:12px; border:1px solid var(--border); border-radius: var(--radius); overflow:hidden; }
 .filter-btn{ flex:1; background: var(--panel); color: var(--muted); border:0; border-right:1px solid var(--border); padding:6px 10px; font-size:12px; font-weight:500; cursor:pointer; transition: var(--transition); }

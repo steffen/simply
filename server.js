@@ -31,6 +31,14 @@ CREATE TABLE IF NOT EXISTS updates (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS time_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  task_id INTEGER NOT NULL,
+  start_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  end_at DATETIME,
+  duration_seconds INTEGER,
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
 `);
 
 // Lightweight migration for new status columns
@@ -52,6 +60,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Helpers
 const rowToTask = (row) => ({ id: row.id, title: row.title, created_at: row.created_at, closed_at: row.closed_at || null, waiting_since: row.waiting_since || null });
 const rowToUpdate = (row) => ({ id: row.id, task_id: row.task_id, content: row.content, created_at: row.created_at });
+const rowToTimeEntry = (row) => ({ id: row.id, task_id: row.task_id, start_at: row.start_at, end_at: row.end_at, duration_seconds: row.duration_seconds, running: !row.end_at });
 
 // Routes
 // Get all tasks with latest update content preview
@@ -83,8 +92,39 @@ app.get('/api/tasks/:id/updates', (req, res) => {
   const id = Number(req.params.id);
   const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(id);
   if (!task) return res.status(404).json({ error: 'Task not found' });
-  const updates = db.prepare('SELECT * FROM updates WHERE task_id = ? ORDER BY created_at DESC, id DESC').all(id);
-  res.json(updates.map(rowToUpdate));
+  const updates = db.prepare('SELECT * FROM updates WHERE task_id = ?').all(id).map(r => ({ type: 'update', ...rowToUpdate(r) }));
+  const times = db.prepare('SELECT * FROM time_entries WHERE task_id = ?').all(id).map(r => ({ type: 'time', ...rowToTimeEntry(r), created_at: r.end_at || r.start_at }));
+  // Combine and sort by created_at desc (for running entries use start time)
+  const combined = [...updates, ...times].sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime() || (b.id - a.id));
+  res.json(combined);
+});
+
+// Start time tracking for a task (if not already running)
+app.post('/api/tasks/:id/time/start', (req, res) => {
+  const id = Number(req.params.id);
+  const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(id);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  const existing = db.prepare('SELECT * FROM time_entries WHERE task_id = ? AND end_at IS NULL').get(id);
+  if (existing) {
+    return res.status(200).json({ type: 'time', ...rowToTimeEntry(existing), created_at: existing.start_at });
+  }
+  const info = db.prepare('INSERT INTO time_entries (task_id) VALUES (?)').run(id);
+  const entry = db.prepare('SELECT * FROM time_entries WHERE id = ?').get(info.lastInsertRowid);
+  res.status(201).json({ type: 'time', ...rowToTimeEntry(entry), created_at: entry.start_at });
+});
+
+// Stop currently running time tracking
+app.post('/api/tasks/:id/time/stop', (req, res) => {
+  const id = Number(req.params.id);
+  const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(id);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  const running = db.prepare('SELECT * FROM time_entries WHERE task_id = ? AND end_at IS NULL').get(id);
+  if (!running) return res.status(404).json({ error: 'No active timer' });
+  const end = new Date().toISOString();
+  const duration = Math.floor((new Date(end).getTime() - new Date(running.start_at).getTime())/1000);
+  db.prepare('UPDATE time_entries SET end_at = ?, duration_seconds = ? WHERE id = ?').run(end, duration, running.id);
+  const entry = db.prepare('SELECT * FROM time_entries WHERE id = ?').get(running.id);
+  res.json({ type: 'time', ...rowToTimeEntry(entry), created_at: entry.end_at });
 });
 
 // Add update to task

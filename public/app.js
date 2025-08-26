@@ -7,6 +7,7 @@ const newTaskForm = $('#new-task-form'); // now contains only a + button
 const deleteTaskBtn = $('#delete-task');
 const markClosedBtn = $('#mark-closed');
 const markWaitingBtn = $('#mark-waiting');
+const timeTrackBtn = $('#time-track');
 
 const emptyState = $('#empty-state');
 const taskView = $('#task-view');
@@ -18,8 +19,9 @@ const newUpdateInput = $('#new-update');
 let state = {
   tasks: [],
   selectedId: null,
-  currentUpdates: [],
-  filter: 'open'
+  currentUpdates: [], // updates + time entries combined
+  filter: 'open',
+  tickingInterval: null
 };
 
 function formatDate(iso){
@@ -105,31 +107,88 @@ async function selectTask(id){
   const task = state.tasks.find(t => t.id === id);
   taskTitleEl.textContent = task ? task.title : '';
   updateStatusButtons(task);
-  const updates = await fetchJSON(`/api/tasks/${id}/updates`);
-  renderUpdates(updates);
+  const entries = await fetchJSON(`/api/tasks/${id}/updates`);
+  renderUpdates(entries);
   newUpdateInput.focus();
 }
 
-function renderUpdates(updates){
-  state.currentUpdates = updates;
+function renderUpdates(items){
+  state.currentUpdates = items;
   updatesEl.innerHTML = '';
-  updates.forEach((u) => {
-    const li = document.createElement('li');
-    li.className = 'update';
-    li.dataset.id = String(u.id);
-    const abs = formatDate(u.created_at);
-    const rel = relativeTime(u.created_at);
-    li.innerHTML = `
-      <div class="update-body">${linkify(escapeHtml(u.content))}</div>
-      <time title="${abs}" datetime="${u.created_at}">${rel}</time>
-    `;
-    li.addEventListener('click', (e) => {
-      const target = e.target;
-      if (target.closest('button') || target.closest('input') || target.closest('a')) return;
-      startEditUpdate(u.id);
-    });
-    updatesEl.appendChild(li);
+  let hasRunning = false;
+  items.forEach(item => {
+    if (item.type === 'update') {
+      const li = document.createElement('li');
+      li.className = 'update';
+      li.dataset.id = String(item.id);
+      const abs = formatDate(item.created_at);
+      const rel = relativeTime(item.created_at);
+      li.innerHTML = `
+        <div class="update-body">${linkify(escapeHtml(item.content))}</div>
+        <time title="${abs}" datetime="${item.created_at}">${rel}</time>
+      `;
+      li.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target.closest('button') || target.closest('input') || target.closest('a')) return;
+        startEditUpdate(item.id);
+      });
+      updatesEl.appendChild(li);
+    } else if (item.type === 'time') {
+      const li = document.createElement('li');
+      const running = item.running;
+      if (running) hasRunning = true;
+      li.className = 'time-entry' + (running ? ' running' : '');
+      li.dataset.id = 'te-' + item.id;
+      const startAbs = formatDate(item.start_at);
+      const endAbs = item.end_at ? formatDate(item.end_at) : '';
+      const rangeText = item.end_at ? `${startAbs} → ${endAbs}` : `${startAbs} → ...`;
+      const duration = running ? liveDuration(item.start_at) : formatDuration(item.duration_seconds || 0);
+      li.innerHTML = `
+        <div class="te-header"><span>${running ? '⏱ Running' : '🕒 Tracked'}</span><span class="te-duration" data-start="${item.start_at}" data-running="${running}">${duration}</span></div>
+        <div class="te-range">${rangeText}</div>
+      `;
+      updatesEl.appendChild(li);
+    }
   });
+  updateTimeTrackButton(hasRunning);
+  ensureTicking(hasRunning);
+}
+
+function liveDuration(startIso){
+  const diff = Math.max(0, Date.now() - new Date(startIso).getTime());
+  return formatDuration(Math.floor(diff/1000));
+}
+
+function formatDuration(sec){
+  const h = Math.floor(sec/3600);
+  const m = Math.floor((sec % 3600)/60);
+  const s = sec % 60;
+  if (h) return `${h}h ${m}m ${s}s`;
+  if (m) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function tickRunning(){
+  $$('.time-entry.running .te-duration').forEach(span => {
+    const start = span.getAttribute('data-start');
+    if (start) span.textContent = liveDuration(start);
+  });
+}
+
+function ensureTicking(hasRunning){
+  if (hasRunning && !state.tickingInterval){
+    state.tickingInterval = setInterval(tickRunning, 1000);
+  } else if (!hasRunning && state.tickingInterval){
+    clearInterval(state.tickingInterval);
+    state.tickingInterval = null;
+  }
+}
+
+function updateTimeTrackButton(running){
+  if (!timeTrackBtn) return;
+  timeTrackBtn.classList.toggle('running', running);
+  timeTrackBtn.textContent = running ? 'Stop' : 'Time';
+  timeTrackBtn.title = running ? 'Stop timer' : 'Start time tracking';
 }
 
 function escapeHtml(str){
@@ -178,9 +237,8 @@ newUpdateForm.addEventListener('submit', async (e) => {
   const content = newUpdateInput.value.trim();
   if (!content) return;
   const update = await fetchJSON(`/api/tasks/${state.selectedId}/updates`, { method: 'POST', body: JSON.stringify({ content }) });
-  // Prepend to updates list visually by reloading updates
-  const updates = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
-  renderUpdates(updates);
+  const entries = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
+  renderUpdates(entries);
   // Update preview in sidebar
   const idx = state.tasks.findIndex(t => t.id === state.selectedId);
   if (idx >= 0) {
@@ -247,6 +305,19 @@ function mergeTask(updated){
 
 markClosedBtn.addEventListener('click', toggleClosed);
 markWaitingBtn.addEventListener('click', toggleWaiting);
+timeTrackBtn && timeTrackBtn.addEventListener('click', async () => {
+  if (!state.selectedId) return;
+  const running = state.currentUpdates.some(e => e.type === 'time' && e.running);
+  try {
+    if (running) {
+      await fetchJSON(`/api/tasks/${state.selectedId}/time/stop`, { method: 'POST' });
+    } else {
+      await fetchJSON(`/api/tasks/${state.selectedId}/time/start`, { method: 'POST' });
+    }
+    const entries = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
+    renderUpdates(entries);
+  } catch(e){ console.error(e); }
+});
 
 async function startEditUpdate(updateId){
   // Prevent multiple edits at once
@@ -296,13 +367,12 @@ async function startEditUpdate(updateId){
     // Persist change
     await fetchJSON(`/api/updates/${updateId}`, { method: 'PUT', body: JSON.stringify({ content }) });
   // Reload updates to reflect server state
-  const updates = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
-    renderUpdates(updates);
-    // If this was the latest update, update sidebar preview
-    if (updates.length && updates[0].id === updateId) {
+  const entries = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
+    renderUpdates(entries);
+    if (entries.length && entries[0].type === 'update' && entries[0].id === updateId) {
       const idx = state.tasks.findIndex(t => t.id === state.selectedId);
       if (idx >= 0) {
-        state.tasks[idx].latest_update = updates[0].content;
+        state.tasks[idx].latest_update = entries[0].content;
       }
       renderTaskList();
     }
