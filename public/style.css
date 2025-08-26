@@ -172,7 +172,7 @@ textarea{ min-height: 46px; max-height: 240px; resize: vertical; width: 100%; li
 .update a:focus-visible{ outline: none; box-shadow: var(--focus-ring); }
 .update a:active{ opacity:.85; }
 .update a:visited{ color: var(--accent); }
-#new-update-form{ padding: 12px 16px; border-top: 1px solid var(--border); background: var(--panel); }
+#new-update-form{ padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--panel); }
 
 .task-item.closed{ opacity: .6; position: relative; }
 .task-item.waiting{ border-style: dashed; }
