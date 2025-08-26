@@ -216,6 +216,21 @@ function tickRunning(){
   });
 }
 
+function updatePageTitleHour(){
+  try {
+    const now = new Date();
+    const mins = now.getMinutes();
+    const minsLeft = 60 - mins; // at :00 => 60
+    const nextHourDate = new Date(now);
+    nextHourDate.setHours(now.getHours() + 1, 0, 0, 0);
+    let h = nextHourDate.getHours();
+    const suffix = h >= 12 ? 'pm' : 'am';
+    h = h % 12; if (h === 0) h = 12;
+  const info = `${minsLeft}m → ${h}${suffix}`;
+  document.title = `Simply (${info})`;
+  } catch { /* ignore */ }
+}
+
 function ensureTicking(hasRunning){
   if (hasRunning && !state.tickingInterval){
     state.tickingInterval = setInterval(tickRunning, 60000); // update every minute
@@ -470,5 +485,8 @@ function refreshRelativeTimes(){
     const iso = t.getAttribute('datetime');
     if (iso) t.textContent = relativeTime(iso);
   });
+  updatePageTitleHour();
 }
 setInterval(refreshRelativeTimes, 60000);
+// Initial title update
+updatePageTitleHour();
