@@ -159,11 +159,16 @@ function renderUpdates(items){
       li.dataset.entryId = item.id;
       const startAbs = formatDate(item.start_at);
       const relStart = relativeTime(item.start_at);
-      const duration = running ? liveDuration(item.start_at) : formatDuration(item.duration_seconds || 0);
-  const leftInitial = running ? computeNextHourLabel() : '';
-      li.innerHTML = `
-        <div class="te-line"><time title="${startAbs}" datetime="${item.start_at}">${relStart}</time><span class="te-sep">→</span><span class="te-duration" data-start="${item.start_at}" data-running="${running}">${duration}</span>${running ? `<span class=\"te-left\" data-start=\"${item.start_at}\">${leftInitial}</span>` : ''}${!running ? `<button class=\"te-trim\" title=\"Trim 15m from end\" aria-label=\"Trim 15 minutes\">−15m</button>` : ''}<button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
-      `;
+  const duration = running ? liveDuration(item.start_at) : formatDuration(item.duration_seconds || 0);
+      if (running) {
+        li.innerHTML = `
+          <div class="te-line"><span class="te-duration" data-start="${item.start_at}" data-running="true">${duration}</span><button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
+        `;
+      } else {
+        li.innerHTML = `
+          <div class="te-line"><time title="${startAbs}" datetime="${item.start_at}">${relStart}</time><span class="te-sep">→</span><span class="te-duration" data-start="${item.start_at}" data-running="false">${duration}</span><button class=\"te-trim\" title=\"Trim 15m from end\" aria-label=\"Trim 15 minutes\">−15m</button><button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
+        `;
+      }
       const delBtn = li.querySelector('.te-delete');
       delBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -198,17 +203,6 @@ function liveDuration(startIso){
   return formatDuration(Math.floor(diff/1000));
 }
 
-function computeNextHourLabel(){
-  const now = new Date();
-  const mins = now.getMinutes();
-  let minsLeft = 60 - mins; // at :00 => 60
-  const nextHourDate = new Date(now);
-  nextHourDate.setHours(now.getHours() + 1, 0, 0, 0); // always future hour
-  let h = nextHourDate.getHours();
-  const suffix = h >= 12 ? 'pm' : 'am';
-  h = h % 12; if (h === 0) h = 12;
-  return `· ${minsLeft}m → ${h}${suffix}`;
-}
 
 function formatDuration(sec){
   if (sec < 60) return '<1m';
@@ -232,11 +226,6 @@ function tickRunning(){
   $$('.time-entry.running .te-duration').forEach(span => {
     const start = span.getAttribute('data-start');
     if (start) span.textContent = liveDuration(start);
-  });
-  $$('.time-entry.running .te-left').forEach(span => {
-  const start = span.getAttribute('data-start');
-  if (!start) return;
-  span.textContent = computeNextHourLabel();
   });
 }
 
