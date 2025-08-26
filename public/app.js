@@ -17,6 +17,7 @@ const newUpdateForm = $('#new-update-form');
 const newUpdateInput = $('#new-update');
 const dailyTotalEl = $('#daily-total');
 const collapseBtn = $('#collapse-sidebar');
+const expandBtn = $('#expand-sidebar');
 
 let state = {
   tasks: [],
@@ -531,6 +532,9 @@ function applySidebarCollapsed(collapsed){
 collapseBtn && collapseBtn.addEventListener('click', () => {
   const isCollapsed = document.body.classList.contains('sidebar-collapsed');
   applySidebarCollapsed(!isCollapsed);
+});
+expandBtn && expandBtn.addEventListener('click', () => {
+  applySidebarCollapsed(false);
 });
 // Restore persisted state
 try {

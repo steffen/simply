@@ -24,6 +24,8 @@ body{
               radial-gradient(1200px 800px at 110% 110%, #0b0f16, transparent),
               var(--bg);
   color: var(--text);
+}
+
 /* GitHub-like Dark UI Theme */
 :root{
   --bg: #0d1117;
