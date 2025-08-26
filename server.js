@@ -171,6 +171,32 @@ app.post('/api/time_entries/:id/trim', (req, res) => {
   res.json({ type: 'time', ...rowToTimeEntry(updated), created_at: updated.end_at });
 });
 
+// Daily summary (current day in server local time)
+app.get('/api/time_entries/summary/today', (req, res) => {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfDay = new Date(startOfDay.getTime() + 86400000);
+  const startISO = startOfDay.toISOString();
+  const endISO = endOfDay.toISOString();
+  const candidates = db.prepare('SELECT * FROM time_entries WHERE start_at < ? AND (end_at IS NULL OR end_at > ?)').all(endISO, startISO);
+  const parseDb = (s) => {
+    if (!s) return null;
+    if (/T.*(Z|[+-]\d\d:?\d\d)$/.test(s)) return new Date(s);
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) return new Date(s.replace(' ', 'T') + 'Z');
+    return new Date(s);
+  };
+  let total = 0;
+  for (const e of candidates){
+    const s = parseDb(e.start_at);
+    const rawEnd = e.end_at ? parseDb(e.end_at) : now;
+    if (!s || !rawEnd) continue;
+    let segStart = Math.max(s.getTime(), startOfDay.getTime());
+    let segEnd = Math.min(rawEnd.getTime(), endOfDay.getTime());
+    if (segEnd > segStart) total += (segEnd - segStart)/1000;
+  }
+  res.json({ total_seconds: Math.floor(total) });
+});
+
 // Add update to task
 app.post('/api/tasks/:id/updates', (req, res) => {
   const id = Number(req.params.id);

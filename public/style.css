@@ -86,6 +86,8 @@ body{
 .btn.icon-btn:active{ background: var(--panel-active); }
 .sidebar-header h1{ margin:0 0 6px; font-size: 16px; font-weight: 600; letter-spacing: .2px; color: var(--text-strong); }
 .row{ display:flex; gap:10px; }
+.daily-total{ margin-top:10px; font-size:12px; color: var(--muted); font-family: var(--mono); letter-spacing:.5px; }
+.daily-total strong{ color: var(--text-strong); font-weight:600; }
 
 input[type="text"], textarea{
   flex:1; padding: 12px 14px; background: var(--bg-muted); border: 1px solid var(--border-muted); color: var(--text);

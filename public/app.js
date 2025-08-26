@@ -15,6 +15,7 @@ const taskTitleEl = $('#task-title');
 const updatesEl = $('#updates');
 const newUpdateForm = $('#new-update-form');
 const newUpdateInput = $('#new-update');
+const dailyTotalEl = $('#daily-total');
 
 let state = {
   tasks: [],
@@ -213,6 +214,15 @@ function formatDuration(sec){
   const m = totalMin % 60;
   if (h === 0) return `${totalMin}m`;
   return `${h}h${m ? ' ' + m + 'm' : ''}`;
+}
+
+async function refreshDailyTotal(){
+  if (!dailyTotalEl) return;
+  try {
+    const data = await fetchJSON('/api/time_entries/summary/today');
+    const secs = data.total_seconds || 0;
+    dailyTotalEl.innerHTML = secs ? `<strong>${formatDuration(secs)}</strong> today` : '';
+  } catch { /* ignore */ }
 }
 
 function tickRunning(){
@@ -501,3 +511,6 @@ function refreshRelativeTimes(){
 setInterval(refreshRelativeTimes, 60000);
 // Initial title update
 updatePageTitleHour();
+// Daily total initial + periodic (every 5 min) refresh
+refreshDailyTotal();
+setInterval(refreshDailyTotal, 300000);
