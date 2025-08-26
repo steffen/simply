@@ -70,6 +70,21 @@ body{
   height: 100vh;
 }
 
+body.sidebar-collapsed #app{ grid-template-columns: 1fr; gap:0; }
+body.sidebar-collapsed .sidebar{ display:none; }
+body.sidebar-collapsed #task-list{ display:none !important; }
+body.sidebar-collapsed .task-list{ display:none !important; }
+body.sidebar-collapsed .expand-sidebar-btn{ opacity:1; pointer-events:auto; }
+
+.collapse-btn{ position: relative; }
+.expand-sidebar-btn{
+  position: fixed; top:18px; left:16px; z-index:1000;
+  background:#21262d; color: var(--text); border:1px solid var(--border); width:34px; height:34px;
+  border-radius: var(--radius); cursor:pointer; font-size:16px; font-weight:600; display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition: var(--transition), transform .25s ease;
+}
+.expand-sidebar-btn:hover{ background: var(--panel-hover); }
+
 .card{
   background: var(--panel);
   border: 1px solid var(--border);

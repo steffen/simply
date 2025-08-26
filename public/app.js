@@ -16,6 +16,7 @@ const updatesEl = $('#updates');
 const newUpdateForm = $('#new-update-form');
 const newUpdateInput = $('#new-update');
 const dailyTotalEl = $('#daily-total');
+const collapseBtn = $('#collapse-sidebar');
 
 let state = {
   tasks: [],
@@ -514,3 +515,26 @@ updatePageTitleHour();
 // Daily total initial + periodic (every 5 min) refresh
 refreshDailyTotal();
 setInterval(refreshDailyTotal, 300000);
+
+// Sidebar collapse/expand
+function applySidebarCollapsed(collapsed){
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  try { localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0'); } catch{}
+  if (collapseBtn){
+    collapseBtn.textContent = collapsed ? '»' : '«';
+    collapseBtn.title = collapsed ? 'Expand task list' : 'Collapse task list';
+    collapseBtn.setAttribute('aria-label', collapseBtn.title);
+  }
+  // Force reflow for some browsers to apply grid change
+  void document.body.offsetWidth;
+}
+collapseBtn && collapseBtn.addEventListener('click', () => {
+  const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+  applySidebarCollapsed(!isCollapsed);
+});
+// Restore persisted state
+try {
+  const stored = localStorage.getItem('sidebarCollapsed');
+  if (stored === '1') applySidebarCollapsed(true);
+  else applySidebarCollapsed(false);
+} catch{}
