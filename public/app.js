@@ -12,6 +12,7 @@ const timeTrackBtn = $('#time-track');
 const emptyState = $('#empty-state');
 const taskView = $('#task-view');
 const taskTitleEl = $('#task-title');
+const taskDailyTotalEl = $('#task-daily-total');
 const updatesEl = $('#updates');
 const newUpdateForm = $('#new-update-form');
 const newUpdateInput = $('#new-update');
@@ -123,6 +124,7 @@ async function selectTask(id){
   updateEmpty();
   const task = state.tasks.find(t => t.id === id);
   taskTitleEl.textContent = task ? task.title : '';
+  refreshTaskDailyTotal();
   updateStatusButtons(task);
   const entries = await fetchJSON(`/api/tasks/${id}/updates`);
   renderUpdates(entries);
@@ -219,6 +221,15 @@ async function refreshDailyTotal(){
     const data = await fetchJSON('/api/time_entries/summary/today');
     const secs = data.total_seconds || 0;
     dailyTotalEl.innerHTML = secs ? `<strong>${formatDuration(secs)}</strong> today` : '';
+  } catch { /* ignore */ }
+}
+
+async function refreshTaskDailyTotal(){
+  if (!taskDailyTotalEl || !state.selectedId) return;
+  try {
+    const data = await fetchJSON(`/api/tasks/${state.selectedId}/time/summary/today`);
+    const secs = data.total_seconds || 0;
+    taskDailyTotalEl.innerHTML = secs ? `<strong>${formatDuration(secs)}</strong> today` : '';
   } catch { /* ignore */ }
 }
 
@@ -506,6 +517,7 @@ updatePageTitleHour();
 // Daily total initial + periodic (every 5 min) refresh
 refreshDailyTotal();
 setInterval(refreshDailyTotal, 300000);
+setInterval(() => { refreshTaskDailyTotal(); }, 300000);
 
 // Sidebar collapse/expand
 function applySidebarCollapsed(collapsed){

@@ -146,6 +146,9 @@ textarea{ min-height: 46px; max-height: 240px; resize: vertical; width: 100%; li
 .task-view{ display:flex; flex-direction: column; height: 100%; }
 .task-view-header{ display:flex; align-items:center; justify-content: space-between; padding:12px 16px; border-bottom: 1px solid var(--border); background: var(--panel-2); }
 .task-view-header h2{ margin:0; font-size: 16px; font-weight:600; color: var(--text-strong); }
+.task-title-block{ display:flex; flex-direction:column; gap:2px; }
+.task-daily-total{ margin:2px 0 0; font-size:12px; color: var(--muted); font-family: var(--mono); letter-spacing:.5px; }
+.task-daily-total strong{ color: var(--text-strong); font-weight:600; }
 .updates{ list-style:none; margin:0; padding: 12px 16px 16px; overflow:auto; flex:1; display:flex; flex-direction: column; gap:12px; }
 .update{ background: var(--panel-2); border:1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; }
 .update time{ color: var(--muted); font-size: 12px; display:block; margin-top:6px; line-height:1.3; }

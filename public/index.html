@@ -35,7 +35,10 @@
       <div id="empty-state" class="empty">Select or add a task</div>
       <section id="task-view" class="task-view hidden">
         <header class="task-view-header">
-          <h2 id="task-title"></h2>
+          <div class="task-title-block">
+            <h2 id="task-title"></h2>
+            <div id="task-daily-total" class="task-daily-total" aria-live="polite" title="Tracked today for this task"></div>
+          </div>
           <div class="task-actions">
             <button id="time-track" class="btn subtle" title="Start/Stop time tracking">Time</button>
             <button id="mark-waiting" class="btn subtle" title="Toggle waiting">Waiting</button>
