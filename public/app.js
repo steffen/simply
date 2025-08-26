@@ -186,14 +186,9 @@ function liveDuration(startIso){
 function computeNextHourLabel(){
   const now = new Date();
   const mins = now.getMinutes();
-  const minsLeft = (60 - mins) % 60 || 60; // 60 when exactly on the hour
+  let minsLeft = 60 - mins; // at :00 => 60
   const nextHourDate = new Date(now);
-  if (mins === 0) {
-    // already at full hour, show current hour as target
-    nextHourDate.setMinutes(0,0,0);
-  } else {
-    nextHourDate.setHours(now.getHours() + 1, 0, 0, 0);
-  }
+  nextHourDate.setHours(now.getHours() + 1, 0, 0, 0); // always future hour
   let h = nextHourDate.getHours();
   const suffix = h >= 12 ? 'pm' : 'am';
   h = h % 12; if (h === 0) h = 12;
