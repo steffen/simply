@@ -24,14 +24,27 @@ let state = {
   tickingInterval: null
 };
 
+function parseServerDate(s){
+  try {
+    if(!s) return null;
+    // If already ISO with zone info
+    if(/T.*(Z|[+-]\d\d:?\d\d)$/.test(s)) return new Date(s);
+    // SQLite CURRENT_TIMESTAMP gives 'YYYY-MM-DD HH:MM:SS' (UTC). Mark as UTC.
+    if(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) return new Date(s.replace(' ', 'T') + 'Z');
+    // Fallback: let Date parse
+    return new Date(s);
+  } catch { return null; }
+}
+
 function formatDate(iso){
-  try { return new Date(iso).toLocaleString(); } catch { return iso; }
+  try { const d = parseServerDate(iso); return d ? d.toLocaleString() : iso; } catch { return iso; }
 }
 
 function relativeTime(iso){
   try {
     const now = Date.now();
-    const then = new Date(iso).getTime();
+    const then = parseServerDate(iso)?.getTime();
+    if(!then) return '';
     const diff = Math.max(0, now - then);
     const sec = Math.floor(diff/1000);
     if (sec < 45) return 'just now';
@@ -155,7 +168,8 @@ function renderUpdates(items){
 }
 
 function liveDuration(startIso){
-  const diff = Math.max(0, Date.now() - new Date(startIso).getTime());
+  const start = parseServerDate(startIso)?.getTime() || Date.now();
+  const diff = Math.max(0, Date.now() - start);
   return formatDuration(Math.floor(diff/1000));
 }
 

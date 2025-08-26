@@ -108,7 +108,8 @@ app.post('/api/tasks/:id/time/start', (req, res) => {
   if (existing) {
     return res.status(200).json({ type: 'time', ...rowToTimeEntry(existing), created_at: existing.start_at });
   }
-  const info = db.prepare('INSERT INTO time_entries (task_id) VALUES (?)').run(id);
+  const startISO = new Date().toISOString();
+  const info = db.prepare('INSERT INTO time_entries (task_id, start_at) VALUES (?, ?)').run(id, startISO);
   const entry = db.prepare('SELECT * FROM time_entries WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json({ type: 'time', ...rowToTimeEntry(entry), created_at: entry.start_at });
 });
@@ -121,7 +122,15 @@ app.post('/api/tasks/:id/time/stop', (req, res) => {
   const running = db.prepare('SELECT * FROM time_entries WHERE task_id = ? AND end_at IS NULL').get(id);
   if (!running) return res.status(404).json({ error: 'No active timer' });
   const end = new Date().toISOString();
-  const duration = Math.floor((new Date(end).getTime() - new Date(running.start_at).getTime())/1000);
+  const parseDb = (s) => {
+    if (!s) return null;
+    if (/T.*(Z|[+-]\d\d:?\d\d)$/.test(s)) return new Date(s);
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) return new Date(s.replace(' ', 'T') + 'Z');
+    return new Date(s);
+  };
+  const startDate = parseDb(running.start_at);
+  const endDate = parseDb(end);
+  const duration = Math.floor((endDate.getTime() - startDate.getTime())/1000);
   db.prepare('UPDATE time_entries SET end_at = ?, duration_seconds = ? WHERE id = ?').run(end, duration, running.id);
   const entry = db.prepare('SELECT * FROM time_entries WHERE id = ?').get(running.id);
   res.json({ type: 'time', ...rowToTimeEntry(entry), created_at: entry.end_at });
