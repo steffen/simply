@@ -48,6 +48,7 @@ data/*.sqlite
 data/*.sqlite-journal
 data/*.sqlite-shm
 data/*.sqlite-wal
+data/.tmp.*
 
 # Misc
 .node_repl_history
