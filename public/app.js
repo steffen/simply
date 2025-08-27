@@ -165,7 +165,7 @@ function renderUpdates(items){
         const startClock = formatClock(item.start_at);
         const endClock = formatClock(item.end_at);
         const duration = formatDuration(item.duration_seconds || 0);
-  li.innerHTML = `<div class="te-line"><time class="te-rel" title="${startAbs}" datetime="${item.start_at}">${relStart}</time> <span class="te-start" title="${startAbs}">${startClock}</span><span class="te-sep">→</span><span class="te-end" title="${endAbs}">${endClock}</span><span class="te-colon">:</span><span class="te-duration" data-start="${item.start_at}" data-running="false">${duration}</span><button class="te-trim" title="Trim 15m from end" aria-label="Trim 15 minutes">−15m</button><button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>`;
+  li.innerHTML = `<div class="te-line"><time class="te-rel" title="${startAbs}" datetime="${item.start_at}">${relStart}</time> <span class="te-start" title="${startAbs}">${startClock}</span><span class="te-sep">→</span><span class="te-end" title="${endAbs}">${endClock}<span class="te-colon">:</span></span><span class="te-duration" data-start="${item.start_at}" data-running="false">${duration}</span><button class="te-trim" title="Trim 15m from end" aria-label="Trim 15 minutes">−15m</button><button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>`;
         const delBtn = li.querySelector('.te-delete');
         delBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
