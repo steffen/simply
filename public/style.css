@@ -185,11 +185,13 @@ body.status-waiting #task-title{ text-shadow: 0 0 6px rgba(110,168,254,.4); }
 .time-entry{ background:transparent; border:none; padding:4px 12px; border-radius: var(--radius-lg); font-size:12px; display:flex; }
 .time-entry.running{ background:#1d2530; border:1px solid var(--border); box-shadow: inset 0 0 0 1px rgba(35,134,54,0.35); padding:8px 12px; }
 .time-entry .te-line{ display:flex; align-items:center; gap:10px; width:100%; }
-.time-entry.running .stop-btn{ margin-left:auto; background:#13341e; border:1px solid var(--success); color: var(--success); font-size:11px; padding:4px 8px; border-radius: var(--radius); cursor:pointer; font-weight:600; }
-.time-entry.running .stop-btn:hover{ background:#144c27; color:#fff; }
-.start-timer-row{ background: var(--panel-2); border:1px dashed var(--border); border-radius: var(--radius-lg); padding:8px 12px; display:flex; align-items:center; }
-.start-timer-row button{ background:#1b2129; border:1px solid var(--border); color: var(--text); font-size:12px; padding:6px 12px; border-radius: var(--radius); cursor:pointer; font-weight:500; }
-.start-timer-row button:hover{ background: var(--panel-hover); }
+/* Unified timer control row */
+.timer-control-row{ list-style:none; }
+.timer-control-btn{ display:flex; align-items:center; gap:12px; width:100%; background:#238636; border:1px solid #2ea043; color:#fff; font-weight:600; padding:10px 14px; border-radius: var(--radius-lg); cursor:pointer; font-size:14px; font-family: var(--font-stack); text-align:left; }
+.timer-control-row.running .timer-control-btn{ background:#da3633; border-color:#f85149; }
+.timer-control-btn:hover{ filter:brightness(1.08); }
+.timer-control-btn:active{ filter:brightness(.95); }
+.timer-duration{ font-family: var(--mono); font-weight:600; font-size:14px; }
 .time-entry time{ color: var(--muted); font-size:12px; }
 .time-entry .te-duration{ font-weight:600; color: var(--text-strong); font-size:12px; font-family: var(--mono); }
 .time-entry .te-sep{ color: var(--muted); font-size:11px; }

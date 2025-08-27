@@ -134,7 +134,7 @@ async function selectTask(id){
 function renderUpdates(items){
   state.currentUpdates = items;
   updatesEl.innerHTML = '';
-  let hasRunning = false;
+  let runningEntry = null;
   items.forEach(item => {
     if (item.type === 'update') {
       const li = document.createElement('li');
@@ -153,35 +153,28 @@ function renderUpdates(items){
       });
       updatesEl.appendChild(li);
     } else if (item.type === 'time') {
-      const li = document.createElement('li');
-      const running = item.running;
-      if (running) hasRunning = true;
-      li.className = 'time-entry' + (running ? ' running' : '');
-      li.dataset.id = 'te-' + item.id;
-      li.dataset.entryId = item.id;
-      const startAbs = formatDate(item.start_at);
-      const relStart = relativeTime(item.start_at);
-  const duration = running ? liveDuration(item.start_at) : formatDuration(item.duration_seconds || 0);
-      if (running) {
-        li.innerHTML = `
-          <div class="te-line"><span class="te-duration" data-start="${item.start_at}" data-running="true">${duration}</span><button class="stop-btn" title="Stop timer" aria-label="Stop timer">Stop</button><button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
-        `;
-      } else {
+      if (item.running) runningEntry = item; // capture running entry for unified control
+      else {
+        const li = document.createElement('li');
+        li.className = 'time-entry';
+        li.dataset.id = 'te-' + item.id;
+        li.dataset.entryId = item.id;
+        const startAbs = formatDate(item.start_at);
+        const relStart = relativeTime(item.start_at);
+        const duration = formatDuration(item.duration_seconds || 0);
         li.innerHTML = `
           <div class="te-line"><time title="${startAbs}" datetime="${item.start_at}">${relStart}</time><span class="te-sep">→</span><span class="te-duration" data-start="${item.start_at}" data-running="false">${duration}</span><button class=\"te-trim\" title=\"Trim 15m from end\" aria-label=\"Trim 15 minutes\">−15m</button><button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
         `;
-      }
-      const delBtn = li.querySelector('.te-delete');
-      delBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        if (!confirm('Delete this time entry?')) return;
-        try {
-          await fetchJSON(`/api/time_entries/${item.id}`, { method: 'DELETE' });
-          const refreshed = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
-          renderUpdates(refreshed);
-        } catch(err){ console.error(err); }
-      });
-      if (!running) {
+        const delBtn = li.querySelector('.te-delete');
+        delBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!confirm('Delete this time entry?')) return;
+          try {
+            await fetchJSON(`/api/time_entries/${item.id}`, { method: 'DELETE' });
+            const refreshed = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
+            renderUpdates(refreshed);
+          } catch(err){ console.error(err); }
+        });
         const trimBtn = li.querySelector('.te-trim');
         trimBtn && trimBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
@@ -191,38 +184,35 @@ function renderUpdates(items){
             renderUpdates(refreshed);
           } catch(err){ console.error(err); }
         });
+        updatesEl.appendChild(li);
       }
-      if (running) {
-        const stopBtn = li.querySelector('.stop-btn');
-        stopBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          try {
-            await fetchJSON(`/api/tasks/${state.selectedId}/time/stop`, { method: 'POST' });
-            const refreshed = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
-            renderUpdates(refreshed);
-          } catch(err){ console.error(err); }
-        });
-      }
-      updatesEl.appendChild(li);
     }
   });
-  if (!hasRunning) {
-    // Inject start timer row at top
-    const li = document.createElement('li');
-    li.className = 'start-timer-row';
-    li.innerHTML = `<button type="button" class="start-timer-btn" aria-label="Start timer" title="Start timer">Start Timer</button>`;
-    const btn = li.querySelector('.start-timer-btn');
-    btn.addEventListener('click', async () => {
-      if (!state.selectedId) return;
-      try {
+  // Unified timer control row at top
+  const controlLi = document.createElement('li');
+  controlLi.className = 'timer-control-row' + (runningEntry ? ' running' : '');
+  const duration = runningEntry ? liveDuration(runningEntry.start_at) : '';
+  controlLi.innerHTML = `
+    <button type="button" class="timer-control-btn" aria-label="${runningEntry ? 'Stop timer' : 'Start timer'}" title="${runningEntry ? 'Stop timer' : 'Start timer'}">
+      ${runningEntry ? `<span class="timer-duration" data-start="${runningEntry.start_at}" data-running="true">${duration}</span>` : ''}
+      <span class="timer-label">${runningEntry ? 'Stop Timer' : 'Start Timer'}</span>
+    </button>
+  `;
+  const controlBtn = controlLi.querySelector('.timer-control-btn');
+  controlBtn.addEventListener('click', async () => {
+    if (!state.selectedId) return;
+    try {
+      if (runningEntry) {
+        await fetchJSON(`/api/tasks/${state.selectedId}/time/stop`, { method: 'POST' });
+      } else {
         await fetchJSON(`/api/tasks/${state.selectedId}/time/start`, { method: 'POST' });
-        const refreshed = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
-        renderUpdates(refreshed);
-      } catch(err){ console.error(err); }
-    });
-    updatesEl.prepend(li);
-  }
-  ensureTicking(hasRunning);
+      }
+      const refreshed = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
+      renderUpdates(refreshed);
+    } catch(err){ console.error(err); }
+  });
+  updatesEl.prepend(controlLi);
+  ensureTicking(!!runningEntry);
 }
 
 function liveDuration(startIso){
@@ -260,7 +250,7 @@ async function refreshTaskDailyTotal(){
 }
 
 function tickRunning(){
-  $$('.time-entry.running .te-duration').forEach(span => {
+  $$('.timer-control-row.running .timer-duration').forEach(span => {
     const start = span.getAttribute('data-start');
     if (start) span.textContent = liveDuration(start);
   });
