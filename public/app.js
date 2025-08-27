@@ -146,7 +146,7 @@ function renderUpdates(items){
         <div class="update-body">${linkify(escapeHtml(item.content))}</div>
         <time title="${abs}" datetime="${item.created_at}">${rel}</time>
       `;
-      li.addEventListener('click', (e) => {
+      li.addEventListener('dblclick', (e) => {
         const target = e.target;
         if (target.closest('button') || target.closest('input') || target.closest('a')) return;
         startEditUpdate(item.id);
