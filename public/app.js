@@ -192,12 +192,12 @@ function renderUpdates(items){
   const controlLi = document.createElement('li');
   controlLi.className = 'timer-control-row' + (runningEntry ? ' running' : '');
   const duration = runningEntry ? liveDuration(runningEntry.start_at) : '';
-  controlLi.innerHTML = `
-    <button type="button" class="timer-control-btn" aria-label="${runningEntry ? 'Stop timer' : 'Start timer'}" title="${runningEntry ? 'Stop timer' : 'Start timer'}">
-      ${runningEntry ? `<span class="timer-duration" data-start="${runningEntry.start_at}" data-running="true">${duration}</span>` : ''}
-      <span class="timer-label">${runningEntry ? 'Stop Timer' : 'Start Timer'}</span>
-    </button>
-  `;
+      controlLi.innerHTML = `
+        <button type="button" class="timer-control-btn" aria-label="${runningEntry ? 'End timer' : 'Start time'}" title="${runningEntry ? 'End timer' : 'Start timer'}">
+          ${runningEntry ? `<span class="timer-duration" data-start="${runningEntry.start_at}" data-running="true">${duration}</span>` : ''}
+          <span class="timer-label">${runningEntry ? 'End timer' : 'Start timer'}</span>
+        </button>
+      `;
   const controlBtn = controlLi.querySelector('.timer-control-btn');
   controlBtn.addEventListener('click', async () => {
     if (!state.selectedId) return;
