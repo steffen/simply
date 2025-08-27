@@ -16,6 +16,7 @@ const taskDailyTotalEl = $('#task-daily-total');
 const updatesEl = $('#updates');
 const newUpdateForm = $('#new-update-form');
 const newUpdateInput = $('#new-update');
+const submitUpdateBtn = $('#submit-update');
 const dailyTotalEl = $('#daily-total');
 const collapseBtn = $('#collapse-sidebar');
 const expandFloatBtn = $('#expand-sidebar-float');
@@ -330,7 +331,13 @@ newUpdateInput.addEventListener('keydown', (e) => {
   }
 });
 
-newUpdateInput.addEventListener('input', () => autoResize(newUpdateInput));
+newUpdateInput.addEventListener('input', () => {
+  autoResize(newUpdateInput);
+  if (submitUpdateBtn){
+    const has = newUpdateInput.value.trim().length > 0;
+    submitUpdateBtn.disabled = !has;
+  }
+});
 autoResize(newUpdateInput);
 
 newUpdateForm.addEventListener('submit', async (e) => {
@@ -349,6 +356,7 @@ newUpdateForm.addEventListener('submit', async (e) => {
   }
   renderTaskList();
   newUpdateInput.value = '';
+  if (submitUpdateBtn) submitUpdateBtn.disabled = true;
   autoResize(newUpdateInput);
   newUpdateInput.focus();
 });
