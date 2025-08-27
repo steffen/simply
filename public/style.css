@@ -90,9 +90,10 @@ body:not(.sidebar-collapsed) .expand-sidebar-float{ display:none; }
   box-shadow: var(--shadow);
   overflow: hidden;
 }
+.sidebar.card{ background: transparent; box-shadow: none; border:none; }
 
 .sidebar{ display:flex; flex-direction: column; }
-.sidebar-header{ padding: 16px 16px 12px; border-bottom: 1px solid var(--border); }
+.sidebar-header{ padding: 16px 16px 12px; border-bottom: none; }
 .sidebar-header-top{ display:flex; align-items:flex-start; justify-content: space-between; gap:12px; }
 .sidebar-header-top .icon-btn{ align-self:flex-start; }
 .sidebar-header-title{ display:flex; flex-direction:column; gap:2px; }
