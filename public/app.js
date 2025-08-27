@@ -160,10 +160,22 @@ function renderUpdates(items){
         li.dataset.id = 'te-' + item.id;
         li.dataset.entryId = item.id;
         const startAbs = formatDate(item.start_at);
+        const endAbs = formatDate(item.end_at);
         const relStart = relativeTime(item.start_at);
+        const startClock = formatClock(item.start_at);
+        const endClock = formatClock(item.end_at);
         const duration = formatDuration(item.duration_seconds || 0);
         li.innerHTML = `
-          <div class="te-line"><time title="${startAbs}" datetime="${item.start_at}">${relStart}</time><span class="te-sep">→</span><span class="te-duration" data-start="${item.start_at}" data-running="false">${duration}</span><button class=\"te-trim\" title=\"Trim 15m from end\" aria-label=\"Trim 15 minutes\">−15m</button><button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button></div>
+          <div class="te-line">
+            <time class="te-rel" title="${startAbs}" datetime="${item.start_at}">${relStart}</time>
+            <span class="te-colon">:</span>
+            <span class="te-start" title="${startAbs}">${startClock}</span>
+            <span class="te-sep">→</span>
+            <span class="te-end" title="${endAbs}">${endClock}</span>
+            <span class="te-colon">:</span>
+            <span class="te-duration" data-start="${item.start_at}" data-running="false">${duration}</span>
+            <button class="te-trim" title="Trim 15m from end" aria-label="Trim 15 minutes">−15m</button><button class="te-delete" title="Delete time entry" aria-label="Delete time entry">×</button>
+          </div>
         `;
         const delBtn = li.querySelector('.te-delete');
         delBtn.addEventListener('click', async (e) => {
@@ -192,12 +204,12 @@ function renderUpdates(items){
   const controlLi = document.createElement('li');
   controlLi.className = 'timer-control-row' + (runningEntry ? ' running' : '');
   const duration = runningEntry ? liveDuration(runningEntry.start_at) : '';
-      controlLi.innerHTML = `
-        <button type="button" class="timer-control-btn" aria-label="${runningEntry ? 'End timer' : 'Start time'}" title="${runningEntry ? 'End timer' : 'Start timer'}">
-          ${runningEntry ? `<span class="timer-duration" data-start="${runningEntry.start_at}" data-running="true">${duration}</span>` : ''}
-          <span class="timer-label">${runningEntry ? 'End timer' : 'Start timer'}</span>
-        </button>
-      `;
+  controlLi.innerHTML = `
+    <button type="button" class="timer-control-btn" aria-label="${runningEntry ? 'End timer' : 'Start time'}" title="${runningEntry ? 'End timer' : 'Start time'}">
+      ${runningEntry ? `<span class="timer-duration" data-start="${runningEntry.start_at}" data-running="true">${duration}</span>` : ''}
+      <span class="timer-label">${runningEntry ? 'End timer' : 'Start time'}</span>
+    </button>
+  `;
   const controlBtn = controlLi.querySelector('.timer-control-btn');
   controlBtn.addEventListener('click', async () => {
     if (!state.selectedId) return;
@@ -219,6 +231,16 @@ function liveDuration(startIso){
   const start = parseServerDate(startIso)?.getTime() || Date.now();
   const diff = Math.max(0, Date.now() - start);
   return formatDuration(Math.floor(diff/1000));
+}
+
+function formatClock(iso){
+  const d = parseServerDate(iso);
+  if(!d) return '';
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const suffix = h >= 12 ? 'pm' : 'am';
+  h = h % 12; if (h === 0) h = 12;
+  return `${h}:${String(m).padStart(2,'0')}${suffix}`;
 }
 
 
