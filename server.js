@@ -1,4 +1,6 @@
 // Simple Express + SQLite (better-sqlite3) server for a dark-mode task manager
+// Hard-coded feature flag to enable/disable time tracking without removing code
+const ENABLE_TIME_TRACKING = false;
 const path = require('path');
 const fs = require('fs');
 const express = require('express');
@@ -93,14 +95,18 @@ app.get('/api/tasks/:id/updates', (req, res) => {
   const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(id);
   if (!task) return res.status(404).json({ error: 'Task not found' });
   const updates = db.prepare('SELECT * FROM updates WHERE task_id = ?').all(id).map(r => ({ type: 'update', ...rowToUpdate(r) }));
-  const times = db.prepare('SELECT * FROM time_entries WHERE task_id = ?').all(id).map(r => ({ type: 'time', ...rowToTimeEntry(r), created_at: r.end_at || r.start_at }));
-  // Combine and sort by created_at desc (for running entries use start time)
-  const combined = [...updates, ...times].sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime() || (b.id - a.id));
+  let times = [];
+  if (ENABLE_TIME_TRACKING) {
+    times = db.prepare('SELECT * FROM time_entries WHERE task_id = ?').all(id).map(r => ({ type: 'time', ...rowToTimeEntry(r), created_at: r.end_at || r.start_at }));
+  }
+  const combined = ENABLE_TIME_TRACKING ? [...updates, ...times] : updates;
+  combined.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime() || (b.id - a.id));
   res.json(combined);
 });
 
 // Start time tracking for a task (if not already running)
 app.post('/api/tasks/:id/time/start', (req, res) => {
+  if (!ENABLE_TIME_TRACKING) return res.status(404).json({ error: 'Time tracking disabled' });
   const id = Number(req.params.id);
   const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(id);
   if (!task) return res.status(404).json({ error: 'Task not found' });
@@ -116,6 +122,7 @@ app.post('/api/tasks/:id/time/start', (req, res) => {
 
 // Stop currently running time tracking
 app.post('/api/tasks/:id/time/stop', (req, res) => {
+  if (!ENABLE_TIME_TRACKING) return res.status(404).json({ error: 'Time tracking disabled' });
   const id = Number(req.params.id);
   const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(id);
   if (!task) return res.status(404).json({ error: 'Task not found' });
@@ -138,6 +145,7 @@ app.post('/api/tasks/:id/time/stop', (req, res) => {
 
 // Delete a time entry
 app.delete('/api/time_entries/:id', (req, res) => {
+  if (!ENABLE_TIME_TRACKING) return res.status(404).json({ error: 'Time tracking disabled' });
   const id = Number(req.params.id);
   const existing = db.prepare('SELECT * FROM time_entries WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Not found' });
@@ -147,6 +155,7 @@ app.delete('/api/time_entries/:id', (req, res) => {
 
 // Trim time off the end of a completed time entry (default 15m)
 app.post('/api/time_entries/:id/trim', (req, res) => {
+  if (!ENABLE_TIME_TRACKING) return res.status(404).json({ error: 'Time tracking disabled' });
   const id = Number(req.params.id);
   const entry = db.prepare('SELECT * FROM time_entries WHERE id = ?').get(id);
   if (!entry) return res.status(404).json({ error: 'Not found' });
@@ -173,6 +182,7 @@ app.post('/api/time_entries/:id/trim', (req, res) => {
 
 // Daily summary (current day in server local time)
 app.get('/api/time_entries/summary/today', (req, res) => {
+  if (!ENABLE_TIME_TRACKING) return res.json({ total_seconds: 0 });
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfDay = new Date(startOfDay.getTime() + 86400000);
@@ -199,6 +209,7 @@ app.get('/api/time_entries/summary/today', (req, res) => {
 
 // Per-task daily summary
 app.get('/api/tasks/:id/time/summary/today', (req, res) => {
+  if (!ENABLE_TIME_TRACKING) return res.json({ total_seconds: 0 });
   const taskId = Number(req.params.id);
   const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(taskId);
   if (!task) return res.status(404).json({ error: 'Task not found' });

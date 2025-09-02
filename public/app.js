@@ -1,4 +1,6 @@
 // Minimal client for the dark task manager
+// Front-end hard-coded feature flag mirroring backend
+const ENABLE_TIME_TRACKING = false;
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
@@ -153,7 +155,7 @@ function renderUpdates(items){
         startEditUpdate(item.id);
       });
       updatesEl.appendChild(li);
-    } else if (item.type === 'time') {
+    } else if (item.type === 'time' && ENABLE_TIME_TRACKING) {
       if (item.running) runningEntry = item; // capture running entry for unified control
       else {
         const li = document.createElement('li');
@@ -190,31 +192,32 @@ function renderUpdates(items){
       }
     }
   });
-  // Unified timer control row at top
-  const controlLi = document.createElement('li');
-  controlLi.className = 'timer-control-row' + (runningEntry ? ' running' : '');
-  const duration = runningEntry ? liveDuration(runningEntry.start_at) : '';
-  controlLi.innerHTML = `
-    <button type="button" class="timer-control-btn" aria-label="${runningEntry ? 'End timer' : 'Start time'}" title="${runningEntry ? 'End timer' : 'Start time'}">
-      ${runningEntry ? `<span class="timer-duration" data-start="${runningEntry.start_at}" data-running="true">${duration}</span>` : ''}
-      <span class="timer-label">${runningEntry ? 'End timer' : 'Start time'}</span>
-    </button>
-  `;
-  const controlBtn = controlLi.querySelector('.timer-control-btn');
-  controlBtn.addEventListener('click', async () => {
-    if (!state.selectedId) return;
-    try {
-      if (runningEntry) {
-        await fetchJSON(`/api/tasks/${state.selectedId}/time/stop`, { method: 'POST' });
-      } else {
-        await fetchJSON(`/api/tasks/${state.selectedId}/time/start`, { method: 'POST' });
-      }
-      const refreshed = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
-      renderUpdates(refreshed);
-    } catch(err){ console.error(err); }
-  });
-  updatesEl.prepend(controlLi);
-  ensureTicking(!!runningEntry);
+  if (ENABLE_TIME_TRACKING) {
+    const controlLi = document.createElement('li');
+    controlLi.className = 'timer-control-row' + (runningEntry ? ' running' : '');
+    const duration = runningEntry ? liveDuration(runningEntry.start_at) : '';
+    controlLi.innerHTML = `
+      <button type="button" class="timer-control-btn" aria-label="${runningEntry ? 'End timer' : 'Start time'}" title="${runningEntry ? 'End timer' : 'Start time'}">
+        ${runningEntry ? `<span class="timer-duration" data-start="${runningEntry.start_at}" data-running="true">${duration}</span>` : ''}
+        <span class="timer-label">${runningEntry ? 'End timer' : 'Start time'}</span>
+      </button>
+    `;
+    const controlBtn = controlLi.querySelector('.timer-control-btn');
+    controlBtn.addEventListener('click', async () => {
+      if (!state.selectedId) return;
+      try {
+        if (runningEntry) {
+          await fetchJSON(`/api/tasks/${state.selectedId}/time/stop`, { method: 'POST' });
+        } else {
+          await fetchJSON(`/api/tasks/${state.selectedId}/time/start`, { method: 'POST' });
+        }
+        const refreshed = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
+        renderUpdates(refreshed);
+      } catch(err){ console.error(err); }
+    });
+    updatesEl.prepend(controlLi);
+    ensureTicking(!!runningEntry);
+  }
 }
 
 function liveDuration(startIso){
@@ -246,6 +249,7 @@ function formatDuration(sec){
 async function refreshDailyTotal(){
   if (!dailyTotalEl) return;
   try {
+    if (!ENABLE_TIME_TRACKING){ dailyTotalEl.innerHTML = ''; return; }
     const data = await fetchJSON('/api/time_entries/summary/today');
     const secs = data.total_seconds || 0;
     dailyTotalEl.innerHTML = secs ? `<strong>${formatDuration(secs)}</strong> today` : '';
@@ -255,6 +259,7 @@ async function refreshDailyTotal(){
 async function refreshTaskDailyTotal(){
   if (!taskDailyTotalEl || !state.selectedId) return;
   try {
+    if (!ENABLE_TIME_TRACKING){ taskDailyTotalEl.innerHTML = ''; return; }
     const data = await fetchJSON(`/api/tasks/${state.selectedId}/time/summary/today`);
     const secs = data.total_seconds || 0;
     taskDailyTotalEl.innerHTML = secs ? `<strong>${formatDuration(secs)}</strong> today` : '';
@@ -284,8 +289,9 @@ function updatePageTitleHour(){
 }
 
 function ensureTicking(hasRunning){
+  if (!ENABLE_TIME_TRACKING) return;
   if (hasRunning && !state.tickingInterval){
-    state.tickingInterval = setInterval(tickRunning, 60000); // update every minute
+    state.tickingInterval = setInterval(tickRunning, 60000);
   } else if (!hasRunning && state.tickingInterval){
     clearInterval(state.tickingInterval);
     state.tickingInterval = null;
