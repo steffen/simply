@@ -541,21 +541,18 @@ setInterval(() => { refreshTaskDailyTotal(); }, 300000);
 function applySidebarCollapsed(collapsed){
   document.body.classList.toggle('sidebar-collapsed', collapsed);
   try { localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0'); } catch{}
-  if (collapseBtn){
-    collapseBtn.textContent = collapsed ? '»' : '«';
-    collapseBtn.title = collapsed ? 'Expand task list' : 'Collapse task list';
-    collapseBtn.setAttribute('aria-label', collapseBtn.title);
+  if (expandFloatBtn){
+    expandFloatBtn.textContent = collapsed ? '»' : '«';
+    expandFloatBtn.title = collapsed ? 'Expand task list' : 'Collapse task list';
+    expandFloatBtn.setAttribute('aria-label', expandFloatBtn.title);
   }
-  // Force reflow for some browsers to apply grid change
   void document.body.offsetWidth;
 }
 collapseBtn && collapseBtn.addEventListener('click', () => {
   const isCollapsed = document.body.classList.contains('sidebar-collapsed');
   applySidebarCollapsed(!isCollapsed);
 });
-expandBtn && expandBtn.addEventListener('click', () => {
-  applySidebarCollapsed(false);
-});
+expandBtn && expandBtn.addEventListener('click', () => applySidebarCollapsed(false));
 // Restore persisted state
 try {
   const stored = localStorage.getItem('sidebarCollapsed');
@@ -563,51 +560,39 @@ try {
   else applySidebarCollapsed(false);
 } catch{}
 
-// Floating expand button hover logic
-let leftEdgeHoverTimeout = null;
-let expandBtnVisible = false;
-let expandBtnLockedPos = null;
-function handleLeftEdgeMove(e){
-  if (!document.body.classList.contains('sidebar-collapsed')) return;
-  const threshold = 20;
-  const insideEdge = e.clientX <= threshold;
-  if (insideEdge){
-    if (!expandBtnVisible){
-  const size = 34; // button size
-  const half = size / 2;
-  let x = e.clientX - half;
-  let y = e.clientY - half;
-  // Clamp inside viewport
-  x = Math.max(2, Math.min(window.innerWidth - size - 2, x));
-  y = Math.max(2, Math.min(window.innerHeight - size - 2, y));
-      expandBtnLockedPos = { x, y };
-      if (expandFloatBtn){
-        expandFloatBtn.style.left = x + 'px';
-        expandFloatBtn.style.top = y + 'px';
-        expandFloatBtn.classList.add('hover-visible');
-      }
-      expandBtnVisible = true;
-    }
-    if (leftEdgeHoverTimeout){ clearTimeout(leftEdgeHoverTimeout); leftEdgeHoverTimeout = null; }
-  } else if (expandBtnVisible){
-    // Start hide timer only if pointer is not over button
-    if (expandFloatBtn && e.target === expandFloatBtn) return;
-    if (leftEdgeHoverTimeout) clearTimeout(leftEdgeHoverTimeout);
-    leftEdgeHoverTimeout = setTimeout(() => {
-      if (expandFloatBtn){ expandFloatBtn.classList.remove('hover-visible'); }
-      expandBtnVisible = false;
-      expandBtnLockedPos = null;
-    }, 350);
+// Slide-out toggle hover logic over top title bar / left edge
+let slideVisible = false;
+let hideTimeout = null;
+function showSlideButton(){
+  if (!expandFloatBtn) return;
+  if (!slideVisible){
+    expandFloatBtn.classList.add('visible');
+    slideVisible = true;
   }
+  if (hideTimeout){ clearTimeout(hideTimeout); hideTimeout = null; }
 }
-window.addEventListener('mousemove', handleLeftEdgeMove, { passive:true });
-expandFloatBtn && expandFloatBtn.addEventListener('mouseleave', () => {
-  if (!document.body.classList.contains('sidebar-collapsed')) return;
-  if (leftEdgeHoverTimeout) clearTimeout(leftEdgeHoverTimeout);
-  leftEdgeHoverTimeout = setTimeout(() => {
-    if (expandFloatBtn){ expandFloatBtn.classList.remove('hover-visible'); }
-    expandBtnVisible = false;
-    expandBtnLockedPos = null;
-  }, 250);
+function scheduleHide(){
+  if (!expandFloatBtn) return;
+  if (hideTimeout) clearTimeout(hideTimeout);
+  hideTimeout = setTimeout(() => {
+    expandFloatBtn.classList.remove('visible');
+    slideVisible = false;
+  }, 260);
+}
+// Hover zones: top title bar region (0-60px from top) OR narrow left edge (0-16px)
+window.addEventListener('mousemove', (e) => {
+  const topZone = e.clientY <= 60; // title bar area
+  const leftZone = e.clientX <= 16; // left edge
+  if (topZone || leftZone){
+    showSlideButton();
+  } else if (slideVisible){
+    scheduleHide();
+  }
 });
-expandFloatBtn && expandFloatBtn.addEventListener('click', () => applySidebarCollapsed(false));
+expandFloatBtn && expandFloatBtn.addEventListener('mouseenter', showSlideButton);
+expandFloatBtn && expandFloatBtn.addEventListener('mouseleave', scheduleHide);
+expandFloatBtn && expandFloatBtn.addEventListener('click', () => {
+  const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+  applySidebarCollapsed(!isCollapsed);
+  showSlideButton();
+});
