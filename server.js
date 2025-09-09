@@ -265,6 +265,15 @@ app.put('/api/updates/:id', (req, res) => {
   res.json(rowToUpdate(updated));
 });
 
+// Delete an update
+app.delete('/api/updates/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const existing = db.prepare('SELECT * FROM updates WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Update not found' });
+  db.prepare('DELETE FROM updates WHERE id = ?').run(id);
+  res.json({ ok: true });
+});
+
 // Update task status (closed / waiting)
 app.patch('/api/tasks/:id/status', (req, res) => {
   const id = Number(req.params.id);

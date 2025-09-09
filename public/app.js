@@ -168,8 +168,43 @@ function renderUpdates(items){
       const rel = relativeTime(item.created_at);
       li.innerHTML = `
         <div class="update-body markdown-body">${markdownToHtml(item.content)}</div>
-        <time title="${abs}" datetime="${item.created_at}">${rel}</time>
+        <div class="update-meta-line">
+          <time title="${abs}" datetime="${item.created_at}">${rel}</time>
+          <button class="mini-delete-update" title="Delete update" aria-label="Delete update">×</button>
+        </div>
       `;
+      const delBtn = li.querySelector('.mini-delete-update');
+      delBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm('Delete this update?')) return;
+        try {
+          await fetchJSON(`/api/updates/${item.id}`, { method: 'DELETE' });
+          // Remove locally
+          const idx = state.currentUpdates.findIndex(u => u.id === item.id && u.type === 'update');
+            if (idx >= 0) state.currentUpdates.splice(idx,1);
+          // Refresh tasks preview if this was the latest
+          const task = state.tasks.find(t => t.id === state.selectedId);
+          if (task && task.latest_at === item.created_at){
+            // Re-fetch latest update for that task
+            try {
+              const updates = await fetchJSON(`/api/tasks/${state.selectedId}/updates`);
+              renderUpdates(updates);
+              // Update sidebar preview
+              const latestUpdate = updates.find(u => u.type === 'update');
+              if (latestUpdate){
+                task.latest_update = latestUpdate.content;
+                task.latest_at = latestUpdate.created_at;
+              } else {
+                task.latest_update = null;
+                task.latest_at = null;
+              }
+              renderTaskList();
+            } catch(err){ console.error(err); }
+          } else {
+            li.remove();
+          }
+        } catch(err){ console.error(err); }
+      });
       li.addEventListener('dblclick', (e) => {
         const target = e.target;
         if (target.closest('button') || target.closest('input') || target.closest('a')) return;
