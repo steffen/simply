@@ -15,6 +15,7 @@ const emptyState = $('#empty-state');
 const taskView = $('#task-view');
 const taskTitleEl = $('#task-title');
 const taskDailyTotalEl = $('#task-daily-total');
+const tasksUpdatedTodayEl = $('#updated-today');
 const updatesEl = $('#updates');
 const newUpdateForm = $('#new-update-form');
 const newUpdateInput = $('#new-update');
@@ -50,6 +51,23 @@ function updateFilterCounts(){
     const label = f.charAt(0).toUpperCase() + f.slice(1);
     btn.textContent = `${label} (${counts[f]})`;
   });
+}
+
+function isSameLocalDay(d1, d2){
+  return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+}
+
+function updateTasksUpdatedToday(){
+  if (!tasksUpdatedTodayEl) return;
+  const today = new Date();
+  let count = 0;
+  for (const t of state.tasks){
+    if (!t.latest_at) continue;
+    const d = parseServerDate(t.latest_at);
+    if (!d) continue;
+    if (isSameLocalDay(d, today)) count++;
+  }
+  tasksUpdatedTodayEl.innerHTML = count ? `<strong>${count}</strong> updated today` : '';
 }
 
 function parseServerDate(s){
@@ -103,6 +121,7 @@ async function loadTasks(){
   state.tasks = await fetchJSON('/api/tasks');
   renderTaskList();
   updateFilterCounts();
+  updateTasksUpdatedToday();
 }
 
 function renderTaskList(){
@@ -158,6 +177,8 @@ async function selectTask(id){
 function renderUpdates(items){
   state.currentUpdates = items;
   updatesEl.innerHTML = '';
+  // Recompute tasks updated today in case latest_at changed via deletion or edit
+  try { updateTasksUpdatedToday(); } catch {}
   let runningEntry = null;
   items.forEach(item => {
     if (item.type === 'update') {
@@ -417,6 +438,7 @@ newTaskForm.addEventListener('submit', async (e) => {
   state.tasks.unshift({ ...task, latest_update: null, latest_at: null });
   renderTaskList();
   updateFilterCounts();
+  updateTasksUpdatedToday();
   selectTask(task.id);
 });
 
@@ -457,6 +479,7 @@ newUpdateForm.addEventListener('submit', async (e) => {
     state.tasks[idx].latest_at = update.created_at;
   }
   renderTaskList();
+  updateTasksUpdatedToday();
   newUpdateInput.value = '';
   if (submitUpdateBtn) submitUpdateBtn.disabled = true;
   autoResize(newUpdateInput);
@@ -472,6 +495,7 @@ deleteTaskBtn.addEventListener('click', async () => {
   try { localStorage.removeItem('selectedTaskId'); } catch {}
   renderTaskList();
   updateFilterCounts();
+  updateTasksUpdatedToday();
   updateEmpty();
 });
 
@@ -497,6 +521,7 @@ async function toggleClosed(){
   mergeTask(updated);
   updateStatusButtons(updated);
   renderTaskList();
+  updateTasksUpdatedToday();
 }
 
 async function toggleWaiting(){
@@ -507,6 +532,7 @@ async function toggleWaiting(){
   mergeTask(updated);
   updateStatusButtons(updated);
   renderTaskList();
+  updateTasksUpdatedToday();
 }
 
 function mergeTask(updated){
@@ -515,6 +541,7 @@ function mergeTask(updated){
     state.tasks[idx] = { ...state.tasks[idx], ...updated };
   }
   updateFilterCounts();
+  updateTasksUpdatedToday();
 }
 
 markClosedBtn.addEventListener('click', toggleClosed);
