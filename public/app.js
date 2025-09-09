@@ -125,6 +125,12 @@ async function loadTasks(){
 }
 
 function renderTaskList(){
+  // Ensure ordering latest updated first (client-side) without relying solely on initial fetch order
+  state.tasks.sort((a,b) => {
+    const ad = parseServerDate(a.updated_at || a.latest_at || a.created_at) || new Date(0);
+    const bd = parseServerDate(b.updated_at || b.latest_at || b.created_at) || new Date(0);
+    return bd.getTime() - ad.getTime() || (b.id - a.id);
+  });
   taskListEl.innerHTML = '';
   const filtered = state.tasks.filter(t => {
     if (state.filter === 'open') return !t.closed_at && !t.waiting_since;

@@ -75,7 +75,11 @@ const rowToTimeEntry = (row) => ({ id: row.id, task_id: row.task_id, start_at: r
 // Routes
 // Get all tasks with latest update content preview
 app.get('/api/tasks', (req, res) => {
-  const tasks = db.prepare('SELECT id, title, created_at, closed_at, waiting_since, updated_at FROM tasks ORDER BY created_at DESC').all();
+  const tasks = db.prepare(`
+    SELECT id, title, created_at, closed_at, waiting_since, updated_at
+    FROM tasks
+    ORDER BY COALESCE(updated_at, created_at) DESC, id DESC
+  `).all();
   const latestStmt = db.prepare(`
     SELECT content, created_at FROM updates WHERE task_id = ? ORDER BY created_at DESC, id DESC LIMIT 1
   `);
