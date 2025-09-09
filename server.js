@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS time_entries (
 );
 `);
 
-// Lightweight migration for new status columns
+// Lightweight migration for new status / updated_at columns
 try {
   const cols = db.prepare("PRAGMA table_info(tasks)").all().map(c => c.name);
   if (!cols.includes('closed_at')) {
@@ -51,6 +51,11 @@ try {
   }
   if (!cols.includes('waiting_since')) {
     db.prepare('ALTER TABLE tasks ADD COLUMN waiting_since DATETIME').run();
+  }
+  if (!cols.includes('updated_at')) {
+    db.prepare('ALTER TABLE tasks ADD COLUMN updated_at DATETIME').run();
+    // Backfill
+    db.prepare('UPDATE tasks SET updated_at = created_at WHERE updated_at IS NULL').run();
   }
 } catch (e) {
   console.error('Migration error:', e);
@@ -60,14 +65,17 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Helpers
-const rowToTask = (row) => ({ id: row.id, title: row.title, created_at: row.created_at, closed_at: row.closed_at || null, waiting_since: row.waiting_since || null });
+const rowToTask = (row) => ({ id: row.id, title: row.title, created_at: row.created_at, closed_at: row.closed_at || null, waiting_since: row.waiting_since || null, updated_at: row.updated_at || null });
+function bumpTaskUpdated(id){
+  db.prepare('UPDATE tasks SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(id);
+}
 const rowToUpdate = (row) => ({ id: row.id, task_id: row.task_id, content: row.content, created_at: row.created_at });
 const rowToTimeEntry = (row) => ({ id: row.id, task_id: row.task_id, start_at: row.start_at, end_at: row.end_at, duration_seconds: row.duration_seconds, running: !row.end_at });
 
 // Routes
 // Get all tasks with latest update content preview
 app.get('/api/tasks', (req, res) => {
-  const tasks = db.prepare('SELECT id, title, created_at, closed_at, waiting_since FROM tasks ORDER BY created_at DESC').all();
+  const tasks = db.prepare('SELECT id, title, created_at, closed_at, waiting_since, updated_at FROM tasks ORDER BY created_at DESC').all();
   const latestStmt = db.prepare(`
     SELECT content, created_at FROM updates WHERE task_id = ? ORDER BY created_at DESC, id DESC LIMIT 1
   `);
@@ -84,8 +92,8 @@ app.post('/api/tasks', (req, res) => {
   if (!title || typeof title !== 'string' || !title.trim()) {
     return res.status(400).json({ error: 'Title is required' });
   }
-  const info = db.prepare('INSERT INTO tasks (title) VALUES (?)').run(title.trim());
-  const task = db.prepare('SELECT id, title, created_at, closed_at, waiting_since FROM tasks WHERE id = ?').get(info.lastInsertRowid);
+  const info = db.prepare('INSERT INTO tasks (title, updated_at) VALUES (?, CURRENT_TIMESTAMP)').run(title.trim());
+  const task = db.prepare('SELECT id, title, created_at, closed_at, waiting_since, updated_at FROM tasks WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json(rowToTask(task));
 });
 
@@ -247,6 +255,7 @@ app.post('/api/tasks/:id/updates', (req, res) => {
     return res.status(400).json({ error: 'Content is required' });
   }
   const info = db.prepare('INSERT INTO updates (task_id, content) VALUES (?, ?)').run(id, content.trim());
+  bumpTaskUpdated(id);
   const update = db.prepare('SELECT * FROM updates WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json(rowToUpdate(update));
 });
@@ -261,6 +270,7 @@ app.put('/api/updates/:id', (req, res) => {
     return res.status(400).json({ error: 'Content is required' });
   }
   db.prepare('UPDATE updates SET content = ? WHERE id = ?').run(content.trim(), id);
+  bumpTaskUpdated(existing.task_id);
   const updated = db.prepare('SELECT * FROM updates WHERE id = ?').get(id);
   res.json(rowToUpdate(updated));
 });
@@ -276,8 +286,8 @@ app.put('/api/tasks/:id', (req, res) => {
   }
   const trimmed = title.trim();
   if (trimmed.length > 200) return res.status(400).json({ error: 'Title too long (max 200 chars)' });
-  db.prepare('UPDATE tasks SET title = ? WHERE id = ?').run(trimmed, id);
-  const updated = db.prepare('SELECT id, title, created_at, closed_at, waiting_since FROM tasks WHERE id = ?').get(id);
+  db.prepare('UPDATE tasks SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(trimmed, id);
+  const updated = db.prepare('SELECT id, title, created_at, closed_at, waiting_since, updated_at FROM tasks WHERE id = ?').get(id);
   res.json(rowToTask(updated));
 });
 
@@ -287,6 +297,7 @@ app.delete('/api/updates/:id', (req, res) => {
   const existing = db.prepare('SELECT * FROM updates WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Update not found' });
   db.prepare('DELETE FROM updates WHERE id = ?').run(id);
+  bumpTaskUpdated(existing.task_id);
   res.json({ ok: true });
 });
 
@@ -313,9 +324,9 @@ app.patch('/api/tasks/:id/status', (req, res) => {
     waiting_since = waiting ? now : null;
     if (waiting) closed_at = null; // clear closed if waiting
   }
-  db.prepare('UPDATE tasks SET closed_at = ?, waiting_since = ? WHERE id = ?')
+  db.prepare('UPDATE tasks SET closed_at = ?, waiting_since = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
     .run(closed_at, waiting_since, id);
-  const updated = db.prepare('SELECT id, title, created_at, closed_at, waiting_since FROM tasks WHERE id = ?').get(id);
+  const updated = db.prepare('SELECT id, title, created_at, closed_at, waiting_since, updated_at FROM tasks WHERE id = ?').get(id);
   res.json(rowToTask(updated));
 });
 

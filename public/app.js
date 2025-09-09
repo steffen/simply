@@ -62,8 +62,8 @@ function updateTasksUpdatedToday(){
   const today = new Date();
   let count = 0;
   for (const t of state.tasks){
-    if (!t.latest_at) continue;
-    const d = parseServerDate(t.latest_at);
+    if (!t.updated_at) continue;
+    const d = parseServerDate(t.updated_at);
     if (!d) continue;
     if (isSameLocalDay(d, today)) count++;
   }
@@ -477,6 +477,8 @@ newUpdateForm.addEventListener('submit', async (e) => {
   if (idx >= 0) {
     state.tasks[idx].latest_update = update.content;
     state.tasks[idx].latest_at = update.created_at;
+    // updated_at will be refreshed on refetch, but optimistically set
+    state.tasks[idx].updated_at = update.created_at;
   }
   renderTaskList();
   updateTasksUpdatedToday();
@@ -602,6 +604,7 @@ async function startEditUpdate(updateId){
       const idx = state.tasks.findIndex(t => t.id === state.selectedId);
       if (idx >= 0) {
         state.tasks[idx].latest_update = entries[0].content;
+        state.tasks[idx].updated_at = entries[0].created_at; // optimistic
       }
       renderTaskList();
     }
@@ -667,6 +670,7 @@ if (taskTitleEl){
           mergeTask(updated);
           renderTaskList();
           taskTitleEl.textContent = updated.title;
+          updateTasksUpdatedToday();
         } catch(err){ console.error(err); taskTitleEl.textContent = current; }
       } else {
         taskTitleEl.textContent = current;
