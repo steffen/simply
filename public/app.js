@@ -32,6 +32,26 @@ let state = {
   tickingInterval: null
 };
 
+function countTasks(){
+  let open = 0, waiting = 0, closed = 0;
+  for (const t of state.tasks){
+    if (t.closed_at) closed++; else if (t.waiting_since) waiting++; else open++;
+  }
+  return { open, waiting, closed };
+}
+
+function updateFilterCounts(){
+  const group = document.getElementById('task-filters');
+  if (!group) return;
+  const counts = countTasks();
+  group.querySelectorAll('.filter-btn').forEach(btn => {
+    const f = btn.dataset.filter;
+    if (!f || counts[f] === undefined) return;
+    const label = f.charAt(0).toUpperCase() + f.slice(1);
+    btn.textContent = `${label} (${counts[f]})`;
+  });
+}
+
 function parseServerDate(s){
   try {
     if(!s) return null;
@@ -82,6 +102,7 @@ async function fetchJSON(url, options){
 async function loadTasks(){
   state.tasks = await fetchJSON('/api/tasks');
   renderTaskList();
+  updateFilterCounts();
 }
 
 function renderTaskList(){
@@ -321,6 +342,7 @@ newTaskForm.addEventListener('submit', async (e) => {
   const task = await fetchJSON('/api/tasks', { method: 'POST', body: JSON.stringify({ title }) });
   state.tasks.unshift({ ...task, latest_update: null, latest_at: null });
   renderTaskList();
+  updateFilterCounts();
   selectTask(task.id);
 });
 
@@ -375,6 +397,7 @@ deleteTaskBtn.addEventListener('click', async () => {
   state.selectedId = null;
   try { localStorage.removeItem('selectedTaskId'); } catch {}
   renderTaskList();
+  updateFilterCounts();
   updateEmpty();
 });
 
@@ -417,6 +440,7 @@ function mergeTask(updated){
   if (idx >= 0) {
     state.tasks[idx] = { ...state.tasks[idx], ...updated };
   }
+  updateFilterCounts();
 }
 
 markClosedBtn.addEventListener('click', toggleClosed);
