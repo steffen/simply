@@ -140,18 +140,25 @@ function renderTaskList(){
   });
   filtered.forEach(t => {
     const li = document.createElement('li');
-  let cls = 'task-item';
-  if (t.closed_at) cls += ' closed';
-  else if (t.waiting_since) cls += ' waiting';
-  if (t.id === state.selectedId) cls += ' active';
-  li.className = cls;
+    let cls = 'task-item';
+    if (t.closed_at) cls += ' closed';
+    else if (t.waiting_since) cls += ' waiting';
+    if (t.id === state.selectedId) cls += ' active';
+    li.className = cls;
     li.dataset.id = t.id;
-    const rel = t.latest_at ? relativeTime(t.latest_at) : '';
-    const abs = t.latest_at ? formatDate(t.latest_at) : '';
+    const baseIso = t.updated_at || t.latest_at || t.created_at;
+    let rel = '';
+    let abs = '';
+    if (baseIso){
+      abs = formatDate(baseIso);
+      const d = parseServerDate(baseIso);
+      if (d && isSameLocalDay(d, new Date())) rel = 'today';
+      else rel = relativeTime(baseIso);
+    }
     li.innerHTML = `
       <div class="task-item-line">
         <div class="task-item-title">${escapeHtml(t.title)}</div>
-        ${t.latest_at ? `<time class="last-update" title="${abs}" datetime="${t.latest_at}">${rel}</time>` : ''}
+        ${baseIso ? `<time class="last-update" title="${abs}" datetime="${baseIso}">${rel}</time>` : ''}
       </div>
       <div class="task-item-preview">${t.latest_update ? escapeHtml(t.latest_update) : 'No updates yet'}</div>
     `;
