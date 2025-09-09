@@ -370,6 +370,10 @@ function linkify(text){
   return text.replace(urlRegex, (url) => `<a href="${url}" target="_blank" rel="noreferrer noopener">${url}</a>`);
 }
 function markdownToHtml(raw){
+  // Trim and collapse multiple blank lines to avoid stray empty paragraphs / gaps
+  if (typeof raw === 'string') {
+    raw = raw.trim().replace(/\n{3,}/g, '\n\n');
+  }
   try {
     if (window.marked) {
       // Support both marked.parse() and legacy invocation

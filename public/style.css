@@ -172,8 +172,10 @@ textarea{ min-height: 46px; max-height: 240px; resize: vertical; width: 100%; li
 .update .mini-btn.cancel{ color: var(--muted); }
 .update .mini-btn.cancel:hover{ color: var(--text); }
 .update .update-body{ line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
-.markdown-body{ font-size:14px; line-height:1.55; overflow-wrap:anywhere; }
-.markdown-body p{ margin:0 0 8px; }
+/* Override pre-wrap for parsed markdown to avoid rendering raw newline text nodes between list items */
+.update .update-body.markdown-body{ white-space: normal; }
+.markdown-body{ font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
+.markdown-body p{ margin:0 0 6px; }
 .markdown-body p:last-child{ margin-bottom:0; }
 .markdown-body code{ background:#1f242c; padding:2px 5px; border-radius:4px; font-family: var(--mono); font-size: 12px; }
 .markdown-body pre{ background:#1f242c; padding:10px 12px; border-radius:6px; overflow:auto; font-size:13px; line-height:1.4; }
@@ -182,8 +184,12 @@ textarea{ min-height: 46px; max-height: 240px; resize: vertical; width: 100%; li
 .markdown-body h1{ font-size:18px; }
 .markdown-body h2{ font-size:16px; }
 .markdown-body h3{ font-size:15px; }
-.markdown-body ul, .markdown-body ol{ padding-left:22px; margin:0 0 10px; }
-.markdown-body li{ margin:4px 0; }
+/* Tighter list spacing */
+.markdown-body ul, .markdown-body ol{ padding-left:20px; margin:4px 0 8px; }
+.markdown-body li{ margin:0; }
+.markdown-body li + li{ margin-top:2px; }
+/* Remove paragraph spacing inside list items */
+.markdown-body li p{ margin:0; }
 .markdown-body blockquote{ margin:8px 0; padding:4px 10px; border-left:4px solid #30363d; color: var(--muted); background:#1b2129; border-radius:4px; }
 .markdown-body a{ color: var(--accent); }
 .markdown-body hr{ border:0; border-top:1px solid #30363d; margin:14px 0; }
