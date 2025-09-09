@@ -167,7 +167,7 @@ function renderUpdates(items){
       const abs = formatDate(item.created_at);
       const rel = relativeTime(item.created_at);
       li.innerHTML = `
-        <div class="update-body">${linkify(escapeHtml(item.content))}</div>
+        <div class="update-body markdown-body">${markdownToHtml(item.content)}</div>
         <time title="${abs}" datetime="${item.created_at}">${rel}</time>
       `;
       li.addEventListener('dblclick', (e) => {
@@ -334,6 +334,41 @@ function linkify(text){
   const urlRegex = /(https?:\/\/[\w.-]+(?:\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?)/gi;
   return text.replace(urlRegex, (url) => `<a href="${url}" target="_blank" rel="noreferrer noopener">${url}</a>`);
 }
+function markdownToHtml(raw){
+  try {
+    if (window.marked) {
+      // Support both marked.parse() and legacy invocation
+      const parser = typeof window.marked.parse === 'function' ? window.marked.parse : window.marked;
+      const html = parser(raw, { gfm: true, breaks: true });
+      if (window.DOMPurify) {
+        return window.DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+      }
+      return html;
+    }
+  } catch { /* ignore */ }
+  return linkify(escapeHtml(raw));
+}
+
+// Dynamically ensure markdown libs are loaded (in case CDN blocked or cached old index.html)
+(function ensureMarkdownLibs(){
+  function rerender(){
+    if (state.currentUpdates && state.currentUpdates.length){
+      try { renderUpdates(state.currentUpdates); } catch(e){ console.warn('[Simply] Re-render after markdown libs load failed:', e); }
+    }
+  }
+  if (!window.marked){
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js';
+    s.onload = () => { console.log('[Simply] marked loaded dynamically'); rerender(); };
+    document.head.appendChild(s);
+  }
+  if (!window.DOMPurify){
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js';
+    s.onload = () => { console.log('[Simply] DOMPurify loaded dynamically'); rerender(); };
+    document.head.appendChild(s);
+  }
+})();
 
 newTaskForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -365,8 +400,8 @@ newUpdateInput.addEventListener('input', () => {
     const has = newUpdateInput.value.trim().length > 0;
     submitUpdateBtn.disabled = !has;
   }
+  // stray fragment removed
 });
-autoResize(newUpdateInput);
 
 newUpdateForm.addEventListener('submit', async (e) => {
   e.preventDefault();
