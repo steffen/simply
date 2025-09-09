@@ -632,6 +632,54 @@ loadTasks().then(() => {
   }
 });
 
+// Inline task title editing
+if (taskTitleEl){
+  taskTitleEl.addEventListener('click', () => {
+    if (!state.selectedId) return;
+    // Avoid multiple inputs
+    if (taskTitleEl.querySelector('input')) return;
+    const task = state.tasks.find(t => t.id === state.selectedId);
+    if (!task) return;
+    const current = task.title;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = current;
+    input.setAttribute('maxlength','200');
+    input.style.width = '100%';
+    input.style.font = 'inherit';
+    input.style.background = 'transparent';
+    input.style.border = '1px solid var(--border)';
+    input.style.borderRadius = '4px';
+    input.style.padding = '4px 6px';
+    input.style.color = 'var(--text)';
+    taskTitleEl.innerHTML = '';
+    taskTitleEl.appendChild(input);
+    input.focus();
+    input.select();
+    let cancelled = false;
+    const finish = async (commit) => {
+      if (cancelled) return;
+      cancelled = true;
+      const newTitle = input.value.trim();
+      if (commit && newTitle && newTitle !== current){
+        try {
+          const updated = await fetchJSON(`/api/tasks/${state.selectedId}`, { method: 'PUT', body: JSON.stringify({ title: newTitle }) });
+          mergeTask(updated);
+          renderTaskList();
+          taskTitleEl.textContent = updated.title;
+        } catch(err){ console.error(err); taskTitleEl.textContent = current; }
+      } else {
+        taskTitleEl.textContent = current;
+      }
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+      else if (e.key === 'Escape'){ e.preventDefault(); finish(false); }
+    });
+    input.addEventListener('blur', () => finish(true));
+  });
+}
+
 // Filter controls
 const filterGroup = $('#task-filters');
 if (filterGroup){

@@ -265,6 +265,22 @@ app.put('/api/updates/:id', (req, res) => {
   res.json(rowToUpdate(updated));
 });
 
+// Update task title
+app.put('/api/tasks/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  const { title } = req.body || {};
+  if (!title || typeof title !== 'string' || !title.trim()) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+  const trimmed = title.trim();
+  if (trimmed.length > 200) return res.status(400).json({ error: 'Title too long (max 200 chars)' });
+  db.prepare('UPDATE tasks SET title = ? WHERE id = ?').run(trimmed, id);
+  const updated = db.prepare('SELECT id, title, created_at, closed_at, waiting_since FROM tasks WHERE id = ?').get(id);
+  res.json(rowToTask(updated));
+});
+
 // Delete an update
 app.delete('/api/updates/:id', (req, res) => {
   const id = Number(req.params.id);
