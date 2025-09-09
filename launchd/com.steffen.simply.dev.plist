@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.steffen.simply.dev</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-c</string>
+    <!-- Use repo script directly; adjust absolute path per user -->
+    <string>$HOME/GitHub/steffen/simply/scripts/simply-dev.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/steffen/GitHub/steffen/simply</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>NODE_ENV</key><string>development</string>
+  </dict>
+
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key><false/>
+  </dict>
+
+  <key>StandardOutPath</key><string>/Users/steffen/Library/Logs/simply-dev.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/steffen/Library/Logs/simply-dev.err.log</string>
+</dict>
+</plist>
