@@ -24,14 +24,241 @@ const dailyTotalEl = $('#daily-total');
 const collapseBtn = $('#collapse-sidebar');
 const expandFloatBtn = $('#expand-sidebar-float');
 const expandBtn = $('#expand-sidebar');
+// Plan elements
+const planShortcuts = $('#plan-shortcuts');
+const planTitleEl = $('#plan-title');
+const planSubtitleEl = $('#plan-subtitle');
+const planItemsEl = $('#plan-items');
+const planView = $('#plan-view');
+const planEmpty = $('#plan-empty');
+const exitPlanBtn = $('#exit-plan');
+const newPlanItemForm = $('#new-plan-item-form');
+const newPlanItemInput = $('#new-plan-item');
+const addPlanItemBtn = $('#add-plan-item-btn');
 
+// Unified application state (declare early to avoid TDZ issues)
 let state = {
   tasks: [],
   selectedId: null,
   currentUpdates: [], // updates + time entries combined
   filter: 'open',
-  tickingInterval: null
+  tickingInterval: null,
+  // Plan-related
+  planMode: false,
+  selectedPlanDate: null, // YYYY-MM-DD
+  planCache: {} // date -> { items:[], total, remaining }
 };
+
+// Date utilities
+function fmtDate(d){ return d.toISOString().slice(0,10); }
+function todayDate(){ return fmtDate(new Date()); }
+function dateOffset(base, offsetDays){ const d = new Date(base.getTime() + offsetDays*86400000); return fmtDate(d); }
+function labelForDate(date){
+  const today = todayDate();
+  const base = new Date();
+  const y = dateOffset(base,-1); const tmr = dateOffset(base,1);
+  if (date === today) return 'Today';
+  if (date === y) return 'Yesterday';
+  if (date === tmr) return 'Tomorrow';
+  return date;
+}
+
+// Plan state already initialized in unified state object above
+
+function switchToTaskMode(){
+  state.planMode = false; state.selectedPlanDate = null;
+  planView.classList.add('hidden');
+  $('#task-view') && $('#task-view').classList.toggle('hidden', !state.selectedId);
+  updateEmpty();
+  // Clear active plan shortcut selection
+  planShortcuts && planShortcuts.querySelectorAll('.plan-shortcut').forEach(b => b.classList.remove('active'));
+}
+function switchToPlanMode(date){
+  state.planMode = true; state.selectedPlanDate = date; state.selectedId = null; // deselect task
+  taskView.classList.add('hidden');
+  emptyState.classList.add('hidden');
+  planView.classList.remove('hidden');
+  // highlight
+  planShortcuts && planShortcuts.querySelectorAll('.plan-shortcut').forEach(b => b.classList.toggle('active', computeShortcutDate(b.dataset.rel) === date));
+  renderPlan(date);
+}
+
+function computeShortcutDate(rel){
+  const now = new Date();
+  if (rel === 'yesterday') return dateOffset(now,-1);
+  if (rel === 'today') return fmtDate(now);
+  if (rel === 'tomorrow') return dateOffset(now,1);
+  return fmtDate(now);
+}
+
+async function loadPlan(date){
+  try {
+    const data = await fetchJSON(`/api/daily_plans/${date}`);
+    state.planCache[date] = { items: data.items, total: data.total, remaining: data.remaining, loadedAt: Date.now() };
+    renderPlan(date);
+    updatePlanCounts();
+  } catch(err){ console.error(err); }
+}
+
+function renderPlan(date){
+  if (!planView) return;
+  const cached = state.planCache[date];
+  planTitleEl.textContent = labelForDate(date);
+  try {
+    const d = new Date(date + 'T00:00:00');
+    planSubtitleEl.textContent = d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+  } catch { planSubtitleEl.textContent = date; }
+  planItemsEl.innerHTML = '';
+  const items = cached ? cached.items : [];
+  if (!items.length){
+    planEmpty.classList.remove('hidden');
+  } else {
+    planEmpty.classList.add('hidden');
+  }
+  items.sort((a,b) => a.position - b.position || a.id - b.id);
+  items.forEach(item => {
+    const li = document.createElement('li');
+    li.className = 'plan-item' + (item.done ? ' done' : '');
+    li.dataset.id = item.id;
+    li.innerHTML = `<label class="plan-item-line"><input type="checkbox" class="plan-item-check" ${item.done ? 'checked' : ''}><span class="plan-item-content">${escapeHtml(item.content)}</span><button type="button" class="plan-item-delete" title="Delete">×</button></label>`;
+    const cb = li.querySelector('.plan-item-check');
+    cb.addEventListener('change', () => togglePlanItem(item.id, cb.checked));
+    const del = li.querySelector('.plan-item-delete');
+    del.addEventListener('click', () => deletePlanItem(item.id));
+    // Inline edit
+    const span = li.querySelector('.plan-item-content');
+    span.addEventListener('dblclick', () => startEditPlanItem(item.id));
+    planItemsEl.appendChild(li);
+  });
+  // Input placeholder focus
+  newPlanItemInput && newPlanItemInput.focus();
+}
+
+async function addPlanItem(date, content){
+  const created = await fetchJSON(`/api/daily_plans/${date}/items`, { method:'POST', body: JSON.stringify({ content }) });
+  if (!state.planCache[date]) state.planCache[date] = { items: [], total: 0, remaining:0 };
+  state.planCache[date].items.push(created);
+  state.planCache[date].total += 1;
+  state.planCache[date].remaining += 1;
+  renderPlan(date);
+  updatePlanCounts();
+}
+
+async function togglePlanItem(id, done){
+  try {
+    const updated = await fetchJSON(`/api/daily_plan_items/${id}`, { method:'PATCH', body: JSON.stringify({ done }) });
+    const date = updated.plan_date;
+    const cache = state.planCache[date];
+    if (cache){
+      const idx = cache.items.findIndex(i => i.id === id);
+      if (idx >=0){ cache.items[idx] = updated; }
+      cache.remaining = cache.items.filter(i => !i.done).length;
+    }
+    renderPlan(date);
+    updatePlanCounts();
+  } catch(err){ console.error(err); }
+}
+
+async function deletePlanItem(id){
+  try {
+    const existing = Object.values(state.planCache).flatMap(c => c.items).find(i => i.id === id);
+    await fetchJSON(`/api/daily_plan_items/${id}`, { method:'DELETE' });
+    if (existing){
+      const date = existing.plan_date;
+      const cache = state.planCache[date];
+      if (cache){
+        cache.items = cache.items.filter(i => i.id !== id);
+        cache.total = cache.items.length;
+        cache.remaining = cache.items.filter(i => !i.done).length;
+      }
+      renderPlan(date);
+      updatePlanCounts();
+    }
+  } catch(err){ console.error(err); }
+}
+
+function startEditPlanItem(id){
+  const li = planItemsEl.querySelector(`.plan-item[data-id="${id}"]`);
+  if (!li || li.classList.contains('editing')) return;
+  li.classList.add('editing');
+  const item = Object.values(state.planCache).flatMap(c => c.items).find(i => i.id === id);
+  if (!item) return;
+  const line = li.querySelector('.plan-item-line');
+  const contentSpan = line.querySelector('.plan-item-content');
+  const original = item.content;
+  const input = document.createElement('input');
+  input.type = 'text'; input.value = original; input.maxLength = 500; input.className = 'plan-edit-input';
+  contentSpan.replaceWith(input);
+  input.focus(); input.select();
+  const finish = async (commit) => {
+    if (!li.classList.contains('editing')) return;
+    li.classList.remove('editing');
+    if (commit){
+      const val = input.value.trim();
+      if (val && val !== original){
+        try {
+          const updated = await fetchJSON(`/api/daily_plan_items/${id}`, { method:'PATCH', body: JSON.stringify({ content: val }) });
+          const cache = state.planCache[updated.plan_date];
+          if (cache){ const idx = cache.items.findIndex(i => i.id === id); if (idx>=0) cache.items[idx] = updated; }
+        } catch(err){ console.error(err); }
+      }
+    }
+    renderPlan(item.plan_date);
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter'){ e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape'){ e.preventDefault(); finish(false); }
+  });
+  input.addEventListener('blur', () => finish(true));
+}
+
+function updatePlanCounts(){
+  // Fetch summary for dynamic counts of yesterday/today/tomorrow
+  fetchJSON('/api/daily_plans/summary').then(data => {
+    ['yesterday','today','tomorrow'].forEach(key => {
+      const span = document.querySelector(`.plan-count[data-for="${key}"]`);
+      if (!span) return;
+      const entry = data[key];
+      if (entry && entry.total){
+        span.textContent = entry.remaining ? `(${entry.remaining}/${entry.total})` : `(0/${entry.total})`;
+      } else {
+        span.textContent = '';
+      }
+    });
+  }).catch(()=>{});
+}
+
+// Plan shortcut events
+planShortcuts && planShortcuts.addEventListener('click', (e) => {
+  const btn = e.target.closest('.plan-shortcut');
+  if (!btn) return;
+  const date = computeShortcutDate(btn.dataset.rel);
+  switchToPlanMode(date);
+  if (!state.planCache[date]) loadPlan(date); else renderPlan(date);
+});
+
+exitPlanBtn && exitPlanBtn.addEventListener('click', () => {
+  switchToTaskMode();
+});
+
+// Add plan item form
+newPlanItemInput && newPlanItemInput.addEventListener('input', () => {
+  addPlanItemBtn && (addPlanItemBtn.disabled = newPlanItemInput.value.trim().length === 0);
+});
+newPlanItemForm && newPlanItemForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!state.selectedPlanDate) return;
+  const text = newPlanItemInput.value.trim();
+  if (!text) return;
+  addPlanItemBtn.disabled = true;
+  try { await addPlanItem(state.selectedPlanDate, text); } catch(err){ console.error(err); }
+  newPlanItemInput.value='';
+  addPlanItemBtn.disabled = true;
+  newPlanItemInput.focus();
+});
+
+// Initial counts load (state is already defined)
+updatePlanCounts();
 
 function countTasks(){
   let open = 0, waiting = 0, closed = 0;

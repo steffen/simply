@@ -41,6 +41,16 @@ CREATE TABLE IF NOT EXISTS time_entries (
   duration_seconds INTEGER,
   FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS daily_plan_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  plan_date TEXT NOT NULL, /* YYYY-MM-DD in local user timezone */
+  content TEXT NOT NULL,
+  done INTEGER NOT NULL DEFAULT 0,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME
+);
+CREATE INDEX IF NOT EXISTS idx_daily_plan_date_position ON daily_plan_items(plan_date, position);
 `);
 
 // Lightweight migration for new status / updated_at columns
@@ -71,6 +81,18 @@ function bumpTaskUpdated(id){
 }
 const rowToUpdate = (row) => ({ id: row.id, task_id: row.task_id, content: row.content, created_at: row.created_at });
 const rowToTimeEntry = (row) => ({ id: row.id, task_id: row.task_id, start_at: row.start_at, end_at: row.end_at, duration_seconds: row.duration_seconds, running: !row.end_at });
+const rowToPlanItem = (row) => ({ id: row.id, plan_date: row.plan_date, content: row.content, done: !!row.done, position: row.position, created_at: row.created_at, updated_at: row.updated_at });
+
+// ---- Daily Plan Helpers ----
+function validatePlanDate(date) {
+  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  return true;
+}
+function nextPlanPosition(planDate){
+  const row = db.prepare('SELECT COALESCE(MAX(position), -1) AS maxp FROM daily_plan_items WHERE plan_date = ?').get(planDate);
+  return (row.maxp || 0) + 1;
+}
+
 
 // Routes
 // Get all tasks with latest update content preview
@@ -340,6 +362,87 @@ app.delete('/api/tasks/:id', (req, res) => {
   const info = db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
   if (info.changes === 0) return res.status(404).json({ error: 'Task not found' });
   res.json({ ok: true });
+});
+
+// ---- Daily Plan Routes ----
+app.get('/api/daily_plans/:date', (req, res) => {
+  const date = req.params.date;
+  if (!validatePlanDate(date)) return res.status(400).json({ error: 'Invalid date' });
+  const items = db.prepare('SELECT * FROM daily_plan_items WHERE plan_date = ? ORDER BY position ASC, id ASC').all(date).map(rowToPlanItem);
+  const total = items.length;
+  const remaining = items.filter(i => !i.done).length;
+  res.json({ date, items, total, remaining });
+});
+
+app.post('/api/daily_plans/:date/items', (req, res) => {
+  const date = req.params.date;
+  if (!validatePlanDate(date)) return res.status(400).json({ error: 'Invalid date' });
+  const { content } = req.body || {};
+  if (!content || typeof content !== 'string' || !content.trim()) return res.status(400).json({ error: 'Content required' });
+  if (content.length > 500) return res.status(400).json({ error: 'Too long (max 500 chars)' });
+  const pos = nextPlanPosition(date);
+  const info = db.prepare('INSERT INTO daily_plan_items (plan_date, content, position) VALUES (?, ?, ?)').run(date, content.trim(), pos);
+  const row = db.prepare('SELECT * FROM daily_plan_items WHERE id = ?').get(info.lastInsertRowid);
+  res.status(201).json(rowToPlanItem(row));
+});
+
+app.patch('/api/daily_plan_items/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const existing = db.prepare('SELECT * FROM daily_plan_items WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+  const { content, done, position } = req.body || {};
+  const sets = [];
+  const params = [];
+  if (typeof content === 'string') {
+    const trimmed = content.trim();
+    if (!trimmed) return res.status(400).json({ error: 'Content cannot be empty' });
+    if (trimmed.length > 500) return res.status(400).json({ error: 'Too long (max 500 chars)' });
+    sets.push('content = ?'); params.push(trimmed);
+  }
+  if (typeof done === 'boolean') { sets.push('done = ?'); params.push(done ? 1 : 0); }
+  if (Number.isInteger(position)) { sets.push('position = ?'); params.push(position); }
+  if (!sets.length) return res.status(400).json({ error: 'No fields to update' });
+  sets.push('updated_at = CURRENT_TIMESTAMP');
+  const sql = `UPDATE daily_plan_items SET ${sets.join(', ')} WHERE id = ?`;
+  params.push(id);
+  db.prepare(sql).run(...params);
+  const row = db.prepare('SELECT * FROM daily_plan_items WHERE id = ?').get(id);
+  res.json(rowToPlanItem(row));
+});
+
+app.post('/api/daily_plan_items/:id/toggle', (req, res) => {
+  const id = Number(req.params.id);
+  const existing = db.prepare('SELECT * FROM daily_plan_items WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+  const newVal = existing.done ? 0 : 1;
+  db.prepare('UPDATE daily_plan_items SET done = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(newVal, id);
+  const row = db.prepare('SELECT * FROM daily_plan_items WHERE id = ?').get(id);
+  res.json(rowToPlanItem(row));
+});
+
+app.delete('/api/daily_plan_items/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const existing = db.prepare('SELECT * FROM daily_plan_items WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Not found' });
+  db.prepare('DELETE FROM daily_plan_items WHERE id = ?').run(id);
+  res.json({ ok: true });
+});
+
+// Summary for yesterday, today, tomorrow
+app.get('/api/daily_plans/summary', (req, res) => {
+  function format(d){ return d.toISOString().slice(0,10); }
+  const now = new Date();
+  const todayStr = format(now);
+  const y = new Date(now.getTime() - 86400000); const yesterdayStr = format(y);
+  const t = new Date(now.getTime() + 86400000); const tomorrowStr = format(t);
+  const q = db.prepare('SELECT plan_date, COUNT(*) AS total, SUM(CASE WHEN done = 0 THEN 1 ELSE 0 END) AS remaining FROM daily_plan_items WHERE plan_date IN (?,?,?) GROUP BY plan_date');
+  const rows = q.all(yesterdayStr, todayStr, tomorrowStr);
+  const map = {}; for (const r of rows){ map[r.plan_date] = { total: r.total, remaining: r.remaining || 0 }; }
+  res.json({
+    yesterday: map[yesterdayStr] || { total:0, remaining:0 },
+    today: map[todayStr] || { total:0, remaining:0 },
+    tomorrow: map[tomorrowStr] || { total:0, remaining:0 }
+  });
 });
 
 // Fallback to index.html

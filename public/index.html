@@ -29,7 +29,17 @@
           <button class="filter-btn" data-filter="closed" aria-selected="false">Closed</button>
         </div>
       </div>
-      <ul id="task-list" class="task-list"></ul>
+      <div class="sidebar-body">
+        <ul id="task-list" class="task-list"></ul>
+        <div class="sidebar-plans" id="daily-plans-section">
+        <div class="plans-header">Daily Plans</div>
+        <ul class="plan-shortcuts" id="plan-shortcuts" aria-label="Daily plans">
+          <li><button type="button" class="plan-shortcut" data-rel="yesterday" id="plan-yesterday">Yesterday <span class="plan-count" data-for="yesterday"></span></button></li>
+          <li><button type="button" class="plan-shortcut" data-rel="today" id="plan-today">Today <span class="plan-count" data-for="today"></span></button></li>
+          <li><button type="button" class="plan-shortcut" data-rel="tomorrow" id="plan-tomorrow">Tomorrow <span class="plan-count" data-for="tomorrow"></span></button></li>
+        </ul>
+        </div>
+      </div>
     </aside>
 
     <main class="main card">
@@ -51,6 +61,23 @@
           <button type="submit" id="submit-update" class="btn update-btn" disabled>Update</button>
         </form>
         <ul id="updates" class="updates"></ul>
+      </section>
+      <section id="plan-view" class="plan-view hidden">
+        <header class="task-view-header plan-header">
+          <div class="task-title-block">
+            <h2 id="plan-title"></h2>
+            <div id="plan-subtitle" class="plan-subtitle" aria-live="polite"></div>
+          </div>
+          <div class="task-actions">
+            <button id="exit-plan" class="btn subtle" type="button" title="Back to tasks">Tasks</button>
+          </div>
+        </header>
+        <form id="new-plan-item-form" class="plan-add-row" autocomplete="off">
+          <input id="new-plan-item" type="text" placeholder="Add planned item..." maxlength="500" />
+          <button type="submit" id="add-plan-item-btn" class="btn primary" disabled>Add</button>
+        </form>
+        <ul id="plan-items" class="plan-items"></ul>
+        <div id="plan-empty" class="plan-empty hidden">No items yet — add your first plan item.</div>
       </section>
     </main>
   </div>
