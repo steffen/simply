@@ -695,6 +695,39 @@ newUpdateInput.addEventListener('keydown', (e) => {
   }
 });
 
+function handleMarkdownLinkPaste(e, el){
+  try {
+    if (!el) return;
+    if (el.selectionStart == null || el.selectionEnd == null) return;
+    const selStart = el.selectionStart;
+    const selEnd = el.selectionEnd;
+    if (selStart === selEnd) return; // no selection
+    let selected = el.value.slice(selStart, selEnd);
+    if (!selected || /\n/.test(selected)) return; // ignore multi-line selection
+    const clip = (e.clipboardData || window.clipboardData);
+    if (!clip) return;
+    let url = (clip.getData && clip.getData('text/plain')) || '';
+    url = url.trim();
+    if (!/^https?:\/\/\S+$/i.test(url)) return; // not a simple URL
+    // Avoid wrapping if selection already looks like a markdown link
+    if (/^\[[^\]]+\]\([^()]+\)$/.test(selected.trim())) return;
+    e.preventDefault();
+    const trimmedSel = selected.trim();
+    if (!trimmedSel) return;
+    const before = el.value.slice(0, selStart);
+    const after = el.value.slice(selEnd);
+    const md = `[${trimmedSel}](${url})`;
+    el.value = before + md + after;
+    const caret = before.length + md.length;
+    el.selectionStart = caret;
+    el.selectionEnd = caret;
+    // Trigger input event listeners (e.g., enabling submit button, autoresize)
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  } catch { /* ignore */ }
+}
+
+newUpdateInput.addEventListener('paste', (e) => handleMarkdownLinkPaste(e, newUpdateInput));
+
 newUpdateInput.addEventListener('input', () => {
   autoResize(newUpdateInput);
   if (submitUpdateBtn){
@@ -821,6 +854,7 @@ async function startEditUpdate(updateId){
   const resize = () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 300) + 'px'; };
   resize();
   input.addEventListener('input', resize);
+  input.addEventListener('paste', (e) => handleMarkdownLinkPaste(e, input));
 
   const cleanup = () => {
     li.classList.remove('editing');
