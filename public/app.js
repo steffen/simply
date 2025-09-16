@@ -466,9 +466,17 @@ function renderUpdates(items){
           }
         } catch(err){ console.error(err); }
       });
-      li.addEventListener('dblclick', (e) => {
+      li.addEventListener('click', (e) => {
         const target = e.target;
         if (target.closest('button') || target.closest('input') || target.closest('a')) return;
+        try {
+          const sel = window.getSelection && window.getSelection();
+          if (sel && !sel.isCollapsed && sel.rangeCount) {
+            const range = sel.getRangeAt(0);
+            // If the selection is (partly) inside this update element, treat as text selection, not edit intent
+            if (li.contains(range.commonAncestorContainer)) return;
+          }
+        } catch { /* ignore */ }
         startEditUpdate(item.id);
       });
       updatesEl.appendChild(li);
