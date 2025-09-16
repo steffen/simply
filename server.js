@@ -75,6 +75,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Helpers
+const MAX_UPDATE_LENGTH = 65536; // Match GitHub style comment limit
 const rowToTask = (row) => ({ id: row.id, title: row.title, created_at: row.created_at, closed_at: row.closed_at || null, waiting_since: row.waiting_since || null, updated_at: row.updated_at || null });
 function bumpTaskUpdated(id){
   db.prepare('UPDATE tasks SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(id);
@@ -280,6 +281,9 @@ app.post('/api/tasks/:id/updates', (req, res) => {
   if (!content || typeof content !== 'string' || !content.trim()) {
     return res.status(400).json({ error: 'Content is required' });
   }
+  if (content.length > MAX_UPDATE_LENGTH) {
+    return res.status(400).json({ error: `Content too long (max ${MAX_UPDATE_LENGTH} chars)` });
+  }
   const info = db.prepare('INSERT INTO updates (task_id, content) VALUES (?, ?)').run(id, content.trim());
   bumpTaskUpdated(id);
   const update = db.prepare('SELECT * FROM updates WHERE id = ?').get(info.lastInsertRowid);
@@ -294,6 +298,9 @@ app.put('/api/updates/:id', (req, res) => {
   const { content } = req.body || {};
   if (!content || typeof content !== 'string' || !content.trim()) {
     return res.status(400).json({ error: 'Content is required' });
+  }
+  if (content.length > MAX_UPDATE_LENGTH) {
+    return res.status(400).json({ error: `Content too long (max ${MAX_UPDATE_LENGTH} chars)` });
   }
   db.prepare('UPDATE updates SET content = ? WHERE id = ?').run(content.trim(), id);
   bumpTaskUpdated(existing.task_id);

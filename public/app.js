@@ -846,7 +846,7 @@ async function startEditUpdate(updateId){
   const input = document.createElement('textarea');
   input.className = 'edit-textarea';
   input.value = u.content;
-  input.setAttribute('maxlength', '2000');
+  input.setAttribute('maxlength', '65536');
   const saveBtn = document.createElement('button');
   saveBtn.className = 'mini-btn save';
   saveBtn.textContent = 'Save';
