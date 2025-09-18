@@ -150,7 +150,7 @@ function renderPlan(date){
     span.addEventListener('dblclick', () => startEditPlanItem(item.id));
     planItemsEl.appendChild(li);
   });
-  newPlanItemInput && newPlanItemInput.focus();
+  // Do not auto-focus add field (hidden until hover)
 }
 
 async function addPlanItem(date, content){
