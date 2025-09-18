@@ -397,7 +397,7 @@ app.patch('/api/daily_plan_items/:id', (req, res) => {
   const id = Number(req.params.id);
   const existing = db.prepare('SELECT * FROM daily_plan_items WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Not found' });
-  const { content, done, position } = req.body || {};
+  const { content, done, position, plan_date } = req.body || {};
   const sets = [];
   const params = [];
   if (typeof content === 'string') {
@@ -408,6 +408,15 @@ app.patch('/api/daily_plan_items/:id', (req, res) => {
   }
   if (typeof done === 'boolean') { sets.push('done = ?'); params.push(done ? 1 : 0); }
   if (Number.isInteger(position)) { sets.push('position = ?'); params.push(position); }
+  if (typeof plan_date === 'string') {
+    if (!validatePlanDate(plan_date)) return res.status(400).json({ error: 'Invalid plan_date' });
+    if (plan_date !== existing.plan_date){
+      // moving to new date -> assign next position at end of that date
+      const newPos = nextPlanPosition(plan_date);
+      sets.push('plan_date = ?'); params.push(plan_date);
+      sets.push('position = ?'); params.push(newPos);
+    }
+  }
   if (!sets.length) return res.status(400).json({ error: 'No fields to update' });
   sets.push('updated_at = CURRENT_TIMESTAMP');
   const sql = `UPDATE daily_plan_items SET ${sets.join(', ')} WHERE id = ?`;

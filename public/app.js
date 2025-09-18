@@ -124,21 +124,32 @@ function renderPlan(date){
     planEmpty.classList.add('hidden');
   }
   items.sort((a,b) => a.position - b.position || a.id - b.id);
+  const todayStr = todayDate();
+  const yStr = dateOffset(new Date(), -1);
+  const tomorrowStr = dateOffset(new Date(), 1);
   items.forEach(item => {
     const li = document.createElement('li');
     li.className = 'plan-item' + (item.done ? ' done' : '');
     li.dataset.id = item.id;
-    li.innerHTML = `<label class="plan-item-line"><input type="checkbox" class="plan-item-check" ${item.done ? 'checked' : ''}><span class="plan-item-content">${escapeHtml(item.content)}</span><button type="button" class="plan-item-delete" title="Delete">×</button></label>`;
+    let moveActions = '';
+    if (!item.done && date === yStr){
+      moveActions = `<div class=\"plan-move-actions\"><button type=\"button\" class=\"plan-move-btn\" data-target=\"${todayStr}\" title=\"Move to Today\">→Today</button><button type=\"button\" class=\"plan-move-btn\" data-target=\"${tomorrowStr}\" title=\"Move to Tomorrow\">→Tomorrow</button></div>`;
+    }
+    li.innerHTML = `<label class=\"plan-item-line\"><input type=\"checkbox\" class=\"plan-item-check\" ${item.done ? 'checked' : ''}><span class=\"plan-item-content\">${escapeHtml(item.content)}</span><div class=\"plan-inline-actions\"><button type=\"button\" class=\"plan-item-delete\" title=\"Delete\">×</button>${moveActions}</div></label>`;
     const cb = li.querySelector('.plan-item-check');
     cb.addEventListener('change', () => togglePlanItem(item.id, cb.checked));
     const del = li.querySelector('.plan-item-delete');
     del.addEventListener('click', () => deletePlanItem(item.id));
-    // Inline edit
+    li.querySelectorAll('.plan-move-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-target');
+        if (target) movePlanItem(item.id, target);
+      });
+    });
     const span = li.querySelector('.plan-item-content');
     span.addEventListener('dblclick', () => startEditPlanItem(item.id));
     planItemsEl.appendChild(li);
   });
-  // Input placeholder focus
   newPlanItemInput && newPlanItemInput.focus();
 }
 
@@ -182,6 +193,28 @@ async function deletePlanItem(id){
       renderPlan(date);
       updatePlanCounts();
     }
+  } catch(err){ console.error(err); }
+}
+
+async function movePlanItem(id, newDate){
+  try {
+    const updated = await fetchJSON(`/api/daily_plan_items/${id}`, { method:'PATCH', body: JSON.stringify({ plan_date: newDate }) });
+    // Remove from any existing cache
+    const fromDate = Object.keys(state.planCache).find(d => state.planCache[d].items.some(i => i.id === id));
+    if (fromDate){
+      const fromCache = state.planCache[fromDate];
+      fromCache.items = fromCache.items.filter(i => i.id !== id);
+      fromCache.total = fromCache.items.length;
+      fromCache.remaining = fromCache.items.filter(i => !i.done).length;
+      if (fromDate === state.selectedPlanDate) renderPlan(fromDate);
+    }
+    if (!state.planCache[newDate]) state.planCache[newDate] = { items: [], total:0, remaining:0 };
+    const toCache = state.planCache[newDate];
+    toCache.items.push(updated);
+    toCache.total = toCache.items.length;
+    toCache.remaining = toCache.items.filter(i => !i.done).length;
+    if (newDate === state.selectedPlanDate) renderPlan(newDate);
+    updatePlanCounts();
   } catch(err){ console.error(err); }
 }
 

@@ -286,6 +286,12 @@ body.status-waiting #task-title{ text-shadow: 0 0 6px rgba(110,168,254,.4); }
 .plan-items{ list-style:none; margin:0; padding:16px; flex:1; overflow:auto; display:flex; flex-direction:column; }
 .plan-items > * + *{ margin-top:8px; }
 .plan-item{ background: var(--panel-2); border:1px solid var(--border); border-radius: var(--radius); padding:6px 10px; font-size:14px; line-height:1.4; transition: background var(--transition), border-color var(--transition); }
+.plan-item{ position:relative; }
+.plan-inline-actions{ display:flex; align-items:center; gap:6px; }
+.plan-move-actions{ display:none; gap:4px; }
+.plan-item:hover .plan-move-actions{ display:flex; }
+.plan-move-btn{ background:#1e2530; border:1px solid var(--border); color: var(--accent); font-size:11px; padding:2px 6px; border-radius: var(--radius); cursor:pointer; font-weight:500; }
+.plan-move-btn:hover{ background:#26303c; color:#fff; }
 .plan-item:hover{ background: var(--panel-hover); }
 .plan-item.done{ opacity:.65; }
 .plan-item-line{ display:flex; align-items:center; gap:10px; }
