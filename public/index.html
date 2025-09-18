@@ -58,16 +58,12 @@
       <div class="plan-left">
         <div class="plans-header">Daily Plans</div>
         <ul class="plan-shortcuts" id="plan-shortcuts" aria-label="Daily plans">
-          <li><button type="button" class="plan-shortcut" data-rel="yesterday" id="plan-yesterday">Yesterday <span class="plan-count" data-for="yesterday"></span></button></li>
-          <li><button type="button" class="plan-shortcut" data-rel="today" id="plan-today">Today <span class="plan-count" data-for="today"></span></button></li>
-          <li><button type="button" class="plan-shortcut" data-rel="tomorrow" id="plan-tomorrow">Tomorrow <span class="plan-count" data-for="tomorrow"></span></button></li>
+          <li><button type="button" class="plan-shortcut" data-rel="yesterday" id="plan-yesterday"><span class="plan-label">Yesterday</span> <span class="plan-count" data-for="yesterday"></span><span class="plan-date" data-date-for="yesterday"></span></button></li>
+          <li><button type="button" class="plan-shortcut" data-rel="today" id="plan-today"><span class="plan-label">Today</span> <span class="plan-count" data-for="today"></span><span class="plan-date" data-date-for="today"></span></button></li>
+          <li><button type="button" class="plan-shortcut" data-rel="tomorrow" id="plan-tomorrow"><span class="plan-label">Tomorrow</span> <span class="plan-count" data-for="tomorrow"></span><span class="plan-date" data-date-for="tomorrow"></span></button></li>
         </ul>
       </div>
       <div class="plan-right">
-        <header class="plan-header-inline">
-          <h2 id="plan-title"></h2>
-          <div id="plan-subtitle" class="plan-subtitle" aria-live="polite"></div>
-        </header>
         <form id="new-plan-item-form" class="plan-add-row" autocomplete="off">
           <input id="new-plan-item" type="text" placeholder="Add planned item..." maxlength="500" />
           <button type="submit" id="add-plan-item-btn" class="btn primary" disabled>Add</button>

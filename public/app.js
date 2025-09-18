@@ -26,8 +26,6 @@ const expandFloatBtn = $('#expand-sidebar-float');
 const expandBtn = $('#expand-sidebar');
 // Plan elements
 const planShortcuts = $('#plan-shortcuts');
-const planTitleEl = $('#plan-title');
-const planSubtitleEl = $('#plan-subtitle');
 const planItemsEl = $('#plan-items');
 const planEmpty = $('#plan-empty');
 const exitPlanBtn = $('#exit-plan');
@@ -87,13 +85,37 @@ async function loadPlan(date){
   } catch(err){ console.error(err); }
 }
 
+function updatePlanDateBadges(activeDate){
+  const now = new Date();
+  const map = {
+    yesterday: dateOffset(now,-1),
+    today: fmtDate(now),
+    tomorrow: dateOffset(now,1)
+  };
+  Object.entries(map).forEach(([rel, date]) => {
+    const span = document.querySelector(`.plan-date[data-date-for="${rel}"]`);
+    if (!span) return;
+    if (date === activeDate) {
+      try {
+        const d = new Date(date + 'T00:00:00');
+        const wd = d.toLocaleDateString(undefined, { weekday:'short' }).replace(/\.$/, '');
+        span.textContent = `${wd} ${d.getDate()}`; // e.g. Thu 18
+      } catch { span.textContent = date; }
+    } else span.textContent = '';
+  });
+}
+
+function formatShortDate(dateStr){
+  try {
+    const d = new Date(dateStr + 'T00:00:00');
+    const wd = d.toLocaleDateString(undefined, { weekday:'short' }).replace(/\.$/, '');
+    return `${wd} ${d.getDate()}`;
+  } catch { return dateStr; }
+}
+
 function renderPlan(date){
   const cached = state.planCache[date];
-  planTitleEl.textContent = labelForDate(date);
-  try {
-    const d = new Date(date + 'T00:00:00');
-    planSubtitleEl.textContent = d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric', year:'numeric' });
-  } catch { planSubtitleEl.textContent = date; }
+  updatePlanDateBadges(date);
   planItemsEl.innerHTML = '';
   const items = cached ? cached.items : [];
   if (!items.length){
@@ -220,6 +242,26 @@ planShortcuts && planShortcuts.addEventListener('click', (e) => {
   if (!btn) return;
   const date = computeShortcutDate(btn.dataset.rel);
   setActivePlanDate(date);
+});
+// Hover dates for inactive buttons
+planShortcuts && planShortcuts.addEventListener('mouseover', (e) => {
+  const btn = e.target.closest('.plan-shortcut');
+  if (!btn) return;
+  if (btn.classList.contains('active')) return; // already shows active date elsewhere
+  const rel = btn.dataset.rel;
+  const now = new Date();
+  const dateMap = { yesterday: dateOffset(now,-1), today: fmtDate(now), tomorrow: dateOffset(now,1) };
+  const dateStr = dateMap[rel];
+  if (!dateStr) return;
+  const span = btn.querySelector('.plan-date');
+  if (span && !span.textContent) span.textContent = formatShortDate(dateStr);
+});
+planShortcuts && planShortcuts.addEventListener('mouseout', (e) => {
+  const btn = e.target.closest('.plan-shortcut');
+  if (!btn) return;
+  if (btn.classList.contains('active')) return; // keep active date
+  const span = btn.querySelector('.plan-date');
+  if (span) span.textContent = '';
 });
 // exitPlanBtn removed in new layout; no longer needed
 

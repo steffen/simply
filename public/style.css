@@ -271,6 +271,10 @@ body.status-waiting #task-title{ text-shadow: 0 0 6px rgba(110,168,254,.4); }
 .plan-shortcuts{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
 .plan-shortcuts li{ margin:0; padding:0; }
 .plan-shortcut{ width:100%; text-align:left; background: var(--panel-2); border:1px solid var(--border); color: var(--text); padding:6px 10px; border-radius: var(--radius); cursor:pointer; font-size:13px; font-weight:500; display:flex; justify-content: space-between; align-items:center; transition: var(--transition); }
+.plan-shortcut .plan-label{ flex:0 0 auto; }
+.plan-shortcut .plan-count{ margin-left:8px; }
+.plan-shortcut .plan-date{ margin-left:auto; font-family: var(--mono); font-size:11px; color: var(--muted); padding-left:8px; }
+.plan-shortcut.active .plan-date{ color:#fff; }
 .plan-shortcut:hover{ background: var(--panel-hover); }
 .plan-shortcut.active{ background: var(--accent-2); border-color: var(--accent-2); color:#fff; }
 .plan-count{ font-family: var(--mono); font-size:11px; color: var(--muted); margin-left:8px; }
