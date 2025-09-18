@@ -294,3 +294,17 @@ body.status-waiting #task-title{ text-shadow: 0 0 6px rgba(110,168,254,.4); }
 .plan-empty{ padding:20px 24px; text-align:center; font-size:13px; color: var(--muted); }
 .plan-subtitle{ margin:2px 0 0; font-size:12px; color: var(--muted); font-family: var(--mono); letter-spacing:.5px; }
 .plan-header{ background: var(--panel-2); }
+
+/* --- Layout Overrides: Fixed bottom daily plan row --- */
+#app.fixed-layout, #app{ height:100vh; }
+#app{ gap:14px; padding:16px 20px 16px; }
+.top-row{ flex:1; overflow:hidden; min-height:0; }
+.tasks-pane, .task-pane{ min-height:0; }
+.task-list{ flex:1; min-height:0; height:auto !important; }
+.plan-row{ flex:0 0 260px; padding:16px 20px; }
+.plan-left{ overflow:auto; }
+.plan-right{ min-height:0; }
+.plan-items{ padding:12px 4px 8px 0; min-height:0; }
+@media (max-width:880px){
+  .plan-row{ flex:0 0 300px; }
+}
