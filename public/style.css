@@ -64,18 +64,24 @@ body{
   -webkit-font-smoothing: antialiased;
 }
 
-#app{
-  display:grid;
-  grid-template-columns: 320px 1fr;
-  gap: 20px;
-  padding: 20px 24px;
-  height: 100vh;
-}
+#app{ display:flex; flex-direction:column; gap:18px; padding:20px 24px; min-height:100vh; }
+.top-row{ display:grid; grid-template-columns: 320px 1fr; gap:20px; align-items:stretch; }
+.tasks-pane{ display:flex; flex-direction:column; }
+.task-pane{ display:flex; flex-direction:column; }
+.plan-row{ display:grid; grid-template-columns: 220px 1fr; gap:24px; padding:20px; }
+.plan-left{ display:flex; flex-direction:column; gap:10px; }
+.plan-right{ display:flex; flex-direction:column; }
+.plan-header-inline{ display:flex; flex-direction:column; gap:4px; padding:0 0 6px; border-bottom:1px solid var(--border); margin-bottom:8px; }
 
-body.sidebar-collapsed #app{ grid-template-columns: 1fr; gap:0; }
-body.sidebar-collapsed .sidebar{ display:none; }
-body.sidebar-collapsed #task-list{ display:none !important; }
-body.sidebar-collapsed .task-list{ display:none !important; }
+@media (max-width: 1100px){
+  .plan-row{ grid-template-columns: 180px 1fr; }
+}
+@media (max-width: 880px){
+  .top-row{ grid-template-columns: 1fr; }
+  .plan-row{ grid-template-columns: 1fr; }
+  .plan-left{ flex-direction:row; flex-wrap:wrap; }
+  .plan-shortcuts{ flex-direction:row; flex-wrap:wrap; }
+}
 
 .collapse-btn{ display:none !important; }
 /* Unified slide-out sidebar toggle (collapse/expand) */
@@ -261,9 +267,8 @@ body.status-waiting #task-title{ text-shadow: 0 0 6px rgba(110,168,254,.4); }
 ::-webkit-scrollbar-thumb:hover { background: #313b47; }
 
 /* ---- Daily Plans ---- */
-.sidebar-plans{ margin:4px 8px 12px; padding:10px 10px 12px; background: var(--panel); border:1px solid var(--border); border-radius: var(--radius-lg); }
-.sidebar-plans .plans-header{ font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color: var(--muted); margin:0 0 8px; opacity:.85; }
-.plan-shortcuts{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+.plans-header{ font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color: var(--muted); margin:0 0 4px; opacity:.85; }
+.plan-shortcuts{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
 .plan-shortcuts li{ margin:0; padding:0; }
 .plan-shortcut{ width:100%; text-align:left; background: var(--panel-2); border:1px solid var(--border); color: var(--text); padding:6px 10px; border-radius: var(--radius); cursor:pointer; font-size:13px; font-weight:500; display:flex; justify-content: space-between; align-items:center; transition: var(--transition); }
 .plan-shortcut:hover{ background: var(--panel-hover); }

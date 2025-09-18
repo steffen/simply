@@ -8,69 +8,65 @@
 </head>
 <body>
   <div id="app">
-    <aside class="sidebar card">
-      <div class="sidebar-header">
-        <div class="sidebar-header-top">
-          <div class="sidebar-header-title">
-            <h1>Tasks</h1>
-            <div id="updated-today" class="updated-today" aria-live="polite" title="Number of tasks with an update today"></div>
-            <div id="daily-total" class="daily-total" aria-live="polite" title="Total tracked time today"></div>
+    <div class="top-row">
+      <aside class="tasks-pane card">
+        <div class="sidebar-header">
+          <div class="sidebar-header-top">
+            <div class="sidebar-header-title">
+              <h1>Tasks</h1>
+              <div id="updated-today" class="updated-today" aria-live="polite" title="Number of tasks with an update today"></div>
+              <div id="daily-total" class="daily-total" aria-live="polite" title="Total tracked time today"></div>
+            </div>
+            <div class="header-actions">
+              <button id="collapse-sidebar" type="button" class="btn icon-btn collapse-btn" title="Collapse task list" aria-label="Collapse task list">«</button>
+              <form id="new-task-form" autocomplete="off">
+                <button type="submit" class="btn icon-btn" title="Add task" aria-label="Add task">+</button>
+              </form>
+            </div>
           </div>
-          <div class="header-actions">
-            <button id="collapse-sidebar" type="button" class="btn icon-btn collapse-btn" title="Collapse task list" aria-label="Collapse task list">«</button>
-            <form id="new-task-form" autocomplete="off">
-              <button type="submit" class="btn icon-btn" title="Add task" aria-label="Add task">+</button>
-            </form>
+          <div class="filter-group" id="task-filters" role="tablist" aria-label="Task status filter">
+            <button class="filter-btn active" data-filter="open" aria-selected="true">Open</button>
+            <button class="filter-btn" data-filter="waiting" aria-selected="false">Waiting</button>
+            <button class="filter-btn" data-filter="closed" aria-selected="false">Closed</button>
           </div>
         </div>
-        <div class="filter-group" id="task-filters" role="tablist" aria-label="Task status filter">
-          <button class="filter-btn active" data-filter="open" aria-selected="true">Open</button>
-          <button class="filter-btn" data-filter="waiting" aria-selected="false">Waiting</button>
-          <button class="filter-btn" data-filter="closed" aria-selected="false">Closed</button>
-        </div>
-      </div>
-      <div class="sidebar-body">
         <ul id="task-list" class="task-list"></ul>
-        <div class="sidebar-plans" id="daily-plans-section">
+      </aside>
+      <main class="task-pane card">
+        <div id="empty-state" class="empty">Select or add a task</div>
+        <section id="task-view" class="task-view hidden">
+          <header class="task-view-header">
+            <div class="task-title-block">
+              <h2 id="task-title"></h2>
+              <div id="task-daily-total" class="task-daily-total" aria-live="polite" title="Tracked today for this task"></div>
+            </div>
+            <div class="task-actions">
+              <button id="mark-waiting" class="btn subtle" title="Toggle waiting">Waiting</button>
+              <button id="mark-closed" class="btn subtle" title="Toggle closed">Close</button>
+              <button id="delete-task" class="btn danger" title="Delete task">Delete</button>
+            </div>
+          </header>
+          <form id="new-update-form" class="row">
+            <textarea id="new-update" placeholder="Write an update..." rows="1"></textarea>
+            <button type="submit" id="submit-update" class="btn update-btn" disabled>Update</button>
+          </form>
+            <ul id="updates" class="updates"></ul>
+        </section>
+      </main>
+    </div>
+    <div class="plan-row card" id="plans-section">
+      <div class="plan-left">
         <div class="plans-header">Daily Plans</div>
         <ul class="plan-shortcuts" id="plan-shortcuts" aria-label="Daily plans">
           <li><button type="button" class="plan-shortcut" data-rel="yesterday" id="plan-yesterday">Yesterday <span class="plan-count" data-for="yesterday"></span></button></li>
           <li><button type="button" class="plan-shortcut" data-rel="today" id="plan-today">Today <span class="plan-count" data-for="today"></span></button></li>
           <li><button type="button" class="plan-shortcut" data-rel="tomorrow" id="plan-tomorrow">Tomorrow <span class="plan-count" data-for="tomorrow"></span></button></li>
         </ul>
-        </div>
       </div>
-    </aside>
-
-    <main class="main card">
-      <div id="empty-state" class="empty">Select or add a task</div>
-      <section id="task-view" class="task-view hidden">
-        <header class="task-view-header">
-          <div class="task-title-block">
-            <h2 id="task-title"></h2>
-            <div id="task-daily-total" class="task-daily-total" aria-live="polite" title="Tracked today for this task"></div>
-          </div>
-          <div class="task-actions">
-            <button id="mark-waiting" class="btn subtle" title="Toggle waiting">Waiting</button>
-            <button id="mark-closed" class="btn subtle" title="Toggle closed">Close</button>
-            <button id="delete-task" class="btn danger" title="Delete task">Delete</button>
-          </div>
-        </header>
-        <form id="new-update-form" class="row">
-          <textarea id="new-update" placeholder="Write an update..." rows="1" maxlength="65536"></textarea>
-          <button type="submit" id="submit-update" class="btn update-btn" disabled>Update</button>
-        </form>
-        <ul id="updates" class="updates"></ul>
-      </section>
-      <section id="plan-view" class="plan-view hidden">
-        <header class="task-view-header plan-header">
-          <div class="task-title-block">
-            <h2 id="plan-title"></h2>
-            <div id="plan-subtitle" class="plan-subtitle" aria-live="polite"></div>
-          </div>
-          <div class="task-actions">
-            <button id="exit-plan" class="btn subtle" type="button" title="Back to tasks">Tasks</button>
-          </div>
+      <div class="plan-right">
+        <header class="plan-header-inline">
+          <h2 id="plan-title"></h2>
+          <div id="plan-subtitle" class="plan-subtitle" aria-live="polite"></div>
         </header>
         <form id="new-plan-item-form" class="plan-add-row" autocomplete="off">
           <input id="new-plan-item" type="text" placeholder="Add planned item..." maxlength="500" />
@@ -78,8 +74,8 @@
         </form>
         <ul id="plan-items" class="plan-items"></ul>
         <div id="plan-empty" class="plan-empty hidden">No items yet — add your first plan item.</div>
-      </section>
-    </main>
+      </div>
+    </div>
   </div>
 
     <button id="expand-sidebar-float" type="button" class="expand-sidebar-float" aria-label="Expand task list" title="Expand task list">»</button>

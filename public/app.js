@@ -29,7 +29,6 @@ const planShortcuts = $('#plan-shortcuts');
 const planTitleEl = $('#plan-title');
 const planSubtitleEl = $('#plan-subtitle');
 const planItemsEl = $('#plan-items');
-const planView = $('#plan-view');
 const planEmpty = $('#plan-empty');
 const exitPlanBtn = $('#exit-plan');
 const newPlanItemForm = $('#new-plan-item-form');
@@ -44,7 +43,6 @@ let state = {
   filter: 'open',
   tickingInterval: null,
   // Plan-related
-  planMode: false,
   selectedPlanDate: null, // YYYY-MM-DD
   planCache: {} // date -> { items:[], total, remaining }
 };
@@ -65,22 +63,11 @@ function labelForDate(date){
 
 // Plan state already initialized in unified state object above
 
-function switchToTaskMode(){
-  state.planMode = false; state.selectedPlanDate = null;
-  planView.classList.add('hidden');
-  $('#task-view') && $('#task-view').classList.toggle('hidden', !state.selectedId);
-  updateEmpty();
-  // Clear active plan shortcut selection
-  planShortcuts && planShortcuts.querySelectorAll('.plan-shortcut').forEach(b => b.classList.remove('active'));
-}
-function switchToPlanMode(date){
-  state.planMode = true; state.selectedPlanDate = date; state.selectedId = null; // deselect task
-  taskView.classList.add('hidden');
-  emptyState.classList.add('hidden');
-  planView.classList.remove('hidden');
-  // highlight
+// Plan view always visible in new layout: helper to set active date
+function setActivePlanDate(date){
+  state.selectedPlanDate = date;
   planShortcuts && planShortcuts.querySelectorAll('.plan-shortcut').forEach(b => b.classList.toggle('active', computeShortcutDate(b.dataset.rel) === date));
-  renderPlan(date);
+  if (!state.planCache[date]) loadPlan(date); else renderPlan(date);
 }
 
 function computeShortcutDate(rel){
@@ -101,7 +88,6 @@ async function loadPlan(date){
 }
 
 function renderPlan(date){
-  if (!planView) return;
   const cached = state.planCache[date];
   planTitleEl.textContent = labelForDate(date);
   try {
@@ -233,13 +219,9 @@ planShortcuts && planShortcuts.addEventListener('click', (e) => {
   const btn = e.target.closest('.plan-shortcut');
   if (!btn) return;
   const date = computeShortcutDate(btn.dataset.rel);
-  switchToPlanMode(date);
-  if (!state.planCache[date]) loadPlan(date); else renderPlan(date);
+  setActivePlanDate(date);
 });
-
-exitPlanBtn && exitPlanBtn.addEventListener('click', () => {
-  switchToTaskMode();
-});
+// exitPlanBtn removed in new layout; no longer needed
 
 // Add plan item form
 newPlanItemInput && newPlanItemInput.addEventListener('input', () => {
@@ -259,6 +241,13 @@ newPlanItemForm && newPlanItemForm.addEventListener('submit', async (e) => {
 
 // Initial counts load (state is already defined)
 updatePlanCounts();
+
+// Initialize plan date (today) and load
+if (!state.selectedPlanDate){
+  const today = todayDate();
+  state.selectedPlanDate = today;
+  setActivePlanDate(today);
+}
 
 function countTasks(){
   let open = 0, waiting = 0, closed = 0;
