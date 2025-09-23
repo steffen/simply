@@ -135,7 +135,8 @@ function renderPlan(date){
     if (!item.done && date === yStr){
       moveActions = `<div class=\"plan-move-actions\"><button type=\"button\" class=\"plan-move-btn\" data-target=\"${todayStr}\" title=\"Move to Today\">→Today</button><button type=\"button\" class=\"plan-move-btn\" data-target=\"${tomorrowStr}\" title=\"Move to Tomorrow\">→Tomorrow</button></div>`;
     }
-    li.innerHTML = `<label class=\"plan-item-line\"><input type=\"checkbox\" class=\"plan-item-check\" ${item.done ? 'checked' : ''}><span class=\"plan-item-content\">${escapeHtml(item.content)}</span><div class=\"plan-inline-actions\"><button type=\"button\" class=\"plan-item-delete\" title=\"Delete\">×</button>${moveActions}</div></label>`;
+    const cbId = `plan-cb-${item.id}`;
+    li.innerHTML = `<div class=\"plan-item-line\"><input id=\"${cbId}\" type=\"checkbox\" class=\"plan-item-check\" ${item.done ? 'checked' : ''} aria-labelledby=\"${cbId}-lbl\"><span id=\"${cbId}-lbl\" class=\"plan-item-content\" role=\"textbox\" tabindex=\"0\">${escapeHtml(item.content)}</span><div class=\"plan-inline-actions\"><button type=\"button\" class=\"plan-item-delete\" title=\"Delete\">×</button>${moveActions}</div></div>`;
     const cb = li.querySelector('.plan-item-check');
     cb.addEventListener('change', () => togglePlanItem(item.id, cb.checked));
     const del = li.querySelector('.plan-item-delete');
@@ -147,7 +148,14 @@ function renderPlan(date){
       });
     });
     const span = li.querySelector('.plan-item-content');
-    span.addEventListener('dblclick', () => startEditPlanItem(item.id));
+    span.addEventListener('click', (e) => {
+      if (li.classList.contains('editing')) return;
+      startEditPlanItem(item.id);
+    });
+    // Prevent Enter key from toggling checkbox when focusing text span; start edit instead
+    span.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); startEditPlanItem(item.id); }
+    });
     planItemsEl.appendChild(li);
   });
   // Do not auto-focus add field (hidden until hover)
