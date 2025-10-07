@@ -676,20 +676,7 @@ function tickRunning(){
   });
 }
 
-function updatePageTitleHour(){
-  try {
-    const now = new Date();
-    const mins = now.getMinutes();
-    const minsLeft = 60 - mins; // at :00 => 60
-    const nextHourDate = new Date(now);
-    nextHourDate.setHours(now.getHours() + 1, 0, 0, 0);
-    let h = nextHourDate.getHours();
-    const suffix = h >= 12 ? 'pm' : 'am';
-    h = h % 12; if (h === 0) h = 12;
-  const info = `${minsLeft}m → ${h}${suffix}`;
-  document.title = `Simply (${info})`;
-  } catch { /* ignore */ }
-}
+// Removed dynamic page title countdown to next hour; keep static title from index.html
 
 function ensureTicking(hasRunning){
   if (!ENABLE_TIME_TRACKING) return;
@@ -1114,11 +1101,9 @@ function refreshRelativeTimes(){
     const iso = t.getAttribute('datetime');
     if (iso) t.textContent = relativeTime(iso);
   });
-  updatePageTitleHour();
 }
 setInterval(refreshRelativeTimes, 60000);
-// Initial title update
-updatePageTitleHour();
+// Title now remains static (set in index.html)
 // Daily total initial + periodic (every 5 min) refresh
 refreshDailyTotal();
 setInterval(refreshDailyTotal, 300000);
