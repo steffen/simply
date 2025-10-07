@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS daily_plan_items (
 CREATE INDEX IF NOT EXISTS idx_daily_plan_date_position ON daily_plan_items(plan_date, position);
 `);
 
-// Lightweight migration for new status / updated_at columns
+// Lightweight migration for new status / updated_at / desired_outcome columns
 try {
   const cols = db.prepare("PRAGMA table_info(tasks)").all().map(c => c.name);
   if (!cols.includes('closed_at')) {
@@ -67,6 +67,9 @@ try {
     // Backfill
     db.prepare('UPDATE tasks SET updated_at = created_at WHERE updated_at IS NULL').run();
   }
+  if (!cols.includes('desired_outcome')) {
+    db.prepare('ALTER TABLE tasks ADD COLUMN desired_outcome TEXT').run();
+  }
 } catch (e) {
   console.error('Migration error:', e);
 }
@@ -76,7 +79,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Helpers
 const MAX_UPDATE_LENGTH = 65536; // Match GitHub style comment limit
-const rowToTask = (row) => ({ id: row.id, title: row.title, created_at: row.created_at, closed_at: row.closed_at || null, waiting_since: row.waiting_since || null, updated_at: row.updated_at || null });
+const rowToTask = (row) => ({ id: row.id, title: row.title, desired_outcome: row.desired_outcome || null, created_at: row.created_at, closed_at: row.closed_at || null, waiting_since: row.waiting_since || null, updated_at: row.updated_at || null });
 function bumpTaskUpdated(id){
   db.prepare('UPDATE tasks SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(id);
 }
@@ -99,7 +102,7 @@ function nextPlanPosition(planDate){
 // Get all tasks with latest update content preview
 app.get('/api/tasks', (req, res) => {
   const tasks = db.prepare(`
-    SELECT id, title, created_at, closed_at, waiting_since, updated_at
+    SELECT id, title, desired_outcome, created_at, closed_at, waiting_since, updated_at
     FROM tasks
     ORDER BY COALESCE(updated_at, created_at) DESC, id DESC
   `).all();
@@ -120,7 +123,7 @@ app.post('/api/tasks', (req, res) => {
     return res.status(400).json({ error: 'Title is required' });
   }
   const info = db.prepare('INSERT INTO tasks (title, updated_at) VALUES (?, CURRENT_TIMESTAMP)').run(title.trim());
-  const task = db.prepare('SELECT id, title, created_at, closed_at, waiting_since, updated_at FROM tasks WHERE id = ?').get(info.lastInsertRowid);
+  const task = db.prepare('SELECT id, title, desired_outcome, created_at, closed_at, waiting_since, updated_at FROM tasks WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json(rowToTask(task));
 });
 
@@ -320,7 +323,7 @@ app.put('/api/tasks/:id', (req, res) => {
   const trimmed = title.trim();
   if (trimmed.length > 200) return res.status(400).json({ error: 'Title too long (max 200 chars)' });
   db.prepare('UPDATE tasks SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(trimmed, id);
-  const updated = db.prepare('SELECT id, title, created_at, closed_at, waiting_since, updated_at FROM tasks WHERE id = ?').get(id);
+  const updated = db.prepare('SELECT id, title, desired_outcome, created_at, closed_at, waiting_since, updated_at FROM tasks WHERE id = ?').get(id);
   res.json(rowToTask(updated));
 });
 
@@ -359,7 +362,21 @@ app.patch('/api/tasks/:id/status', (req, res) => {
   }
   db.prepare('UPDATE tasks SET closed_at = ?, waiting_since = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
     .run(closed_at, waiting_since, id);
-  const updated = db.prepare('SELECT id, title, created_at, closed_at, waiting_since, updated_at FROM tasks WHERE id = ?').get(id);
+  const updated = db.prepare('SELECT id, title, desired_outcome, created_at, closed_at, waiting_since, updated_at FROM tasks WHERE id = ?').get(id);
+  res.json(rowToTask(updated));
+});
+
+// Update desired outcome text
+app.patch('/api/tasks/:id/outcome', (req, res) => {
+  const id = Number(req.params.id);
+  const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  const { desired_outcome } = req.body || {};
+  if (typeof desired_outcome !== 'string') return res.status(400).json({ error: 'desired_outcome must be a string' });
+  const trimmed = desired_outcome.trim();
+  if (trimmed.length > 1000) return res.status(400).json({ error: 'Desired outcome too long (max 1000 chars)' });
+  db.prepare('UPDATE tasks SET desired_outcome = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(trimmed || null, id);
+  const updated = db.prepare('SELECT id, title, desired_outcome, created_at, closed_at, waiting_since, updated_at FROM tasks WHERE id = ?').get(id);
   res.json(rowToTask(updated));
 });
 

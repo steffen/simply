@@ -15,6 +15,7 @@ const emptyState = $('#empty-state');
 const taskView = $('#task-view');
 const taskTitleEl = $('#task-title');
 const taskDailyTotalEl = $('#task-daily-total');
+const taskDesiredOutcomeEl = $('#task-desired-outcome');
 const tasksUpdatedTodayEl = $('#updated-today');
 const updatesEl = $('#updates');
 const newUpdateForm = $('#new-update-form');
@@ -479,6 +480,11 @@ async function selectTask(id){
   updateEmpty();
   const task = state.tasks.find(t => t.id === id);
   taskTitleEl.textContent = task ? task.title : '';
+  if (taskDesiredOutcomeEl){
+    const has = task && task.desired_outcome && task.desired_outcome.trim().length;
+    taskDesiredOutcomeEl.textContent = has ? task.desired_outcome : 'Set desired outcome…';
+    taskDesiredOutcomeEl.classList.toggle('placeholder', !has);
+  }
   refreshTaskDailyTotal();
   updateStatusButtons(task);
   const entries = await fetchJSON(`/api/tasks/${id}/updates`);
@@ -1032,6 +1038,50 @@ if (taskTitleEl){
     };
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+      else if (e.key === 'Escape'){ e.preventDefault(); finish(false); }
+    });
+    input.addEventListener('blur', () => finish(true));
+  });
+}
+
+// Inline desired outcome editing
+if (taskDesiredOutcomeEl){
+  taskDesiredOutcomeEl.addEventListener('click', () => {
+    if (!state.selectedId) return;
+    if (taskDesiredOutcomeEl.classList.contains('editing')) return;
+    const task = state.tasks.find(t => t.id === state.selectedId);
+    if (!task) return;
+    const current = task.desired_outcome || '';
+    taskDesiredOutcomeEl.classList.add('editing');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = current;
+    input.setAttribute('maxlength','1000');
+    taskDesiredOutcomeEl.innerHTML = '';
+    taskDesiredOutcomeEl.appendChild(input);
+    input.focus();
+    input.select();
+    let finished = false;
+    const finish = async (commit) => {
+      if (finished) return; finished = true;
+      const newVal = input.value.trim();
+      taskDesiredOutcomeEl.classList.remove('editing');
+      if (commit && newVal !== current){
+        try {
+          const updated = await fetchJSON(`/api/tasks/${state.selectedId}/outcome`, { method:'PATCH', body: JSON.stringify({ desired_outcome: newVal }) });
+          mergeTask(updated);
+          const has = updated.desired_outcome && updated.desired_outcome.trim().length;
+          taskDesiredOutcomeEl.textContent = has ? updated.desired_outcome : 'Set desired outcome…';
+          taskDesiredOutcomeEl.classList.toggle('placeholder', !has);
+        } catch(err){ console.error(err); }
+      } else {
+        const has = current && current.trim().length;
+        taskDesiredOutcomeEl.textContent = has ? current : 'Set desired outcome…';
+        taskDesiredOutcomeEl.classList.toggle('placeholder', !has);
+      }
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter'){ e.preventDefault(); finish(true); }
       else if (e.key === 'Escape'){ e.preventDefault(); finish(false); }
     });
     input.addEventListener('blur', () => finish(true));
