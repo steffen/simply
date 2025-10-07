@@ -6,6 +6,14 @@ const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
 const taskListEl = $('#task-list');
 const newTaskForm = $('#new-task-form'); // now contains only a + button
+// New Task Modal elements
+const newTaskModal = $('#new-task-modal');
+const newTaskModalForm = $('#new-task-modal-form');
+const newTaskTitleInput = $('#new-task-title');
+const newTaskOutcomeInput = $('#new-task-outcome');
+const newTaskCreateBtn = $('#create-new-task');
+const newTaskCancelBtn = $('#cancel-new-task');
+const newTaskCloseBtn = newTaskModal ? newTaskModal.querySelector('.modal-close-btn') : null;
 const deleteTaskBtn = $('#delete-task');
 const markClosedBtn = $('#mark-closed');
 const markWaitingBtn = $('#mark-waiting');
@@ -719,16 +727,97 @@ function markdownToHtml(raw){
   }
 })();
 
-newTaskForm.addEventListener('submit', async (e) => {
+// --- New Task Modal Logic ---
+let lastFocusedBeforeModal = null;
+function openNewTaskModal(){
+  if (!newTaskModal) return;
+  lastFocusedBeforeModal = document.activeElement;
+  newTaskModal.classList.remove('hidden');
+  newTaskModal.setAttribute('aria-hidden','false');
+  document.body.classList.add('modal-open');
+  newTaskTitleInput.value='';
+  newTaskOutcomeInput.value='';
+  newTaskCreateBtn.disabled = true;
+  // Focus after a microtask to ensure visibility
+  setTimeout(() => { newTaskTitleInput.focus(); }, 0);
+  trapFocusInModal(true);
+}
+function closeNewTaskModal(){
+  if (!newTaskModal) return;
+  newTaskModal.classList.add('hidden');
+  newTaskModal.setAttribute('aria-hidden','true');
+  document.body.classList.remove('modal-open');
+  trapFocusInModal(false);
+  if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === 'function') {
+    try { lastFocusedBeforeModal.focus(); } catch{}
+  }
+}
+function trapFocusInModal(enable){
+  if (!newTaskModal) return;
+  if (enable){
+    document.addEventListener('keydown', focusTrapHandler, true);
+  } else {
+    document.removeEventListener('keydown', focusTrapHandler, true);
+  }
+}
+function focusTrapHandler(e){
+  if (e.key !== 'Tab') return;
+  if (newTaskModal.classList.contains('hidden')) return;
+  const focusables = Array.from(newTaskModal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+    .filter(el => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden'));
+  if (!focusables.length) return;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  if (e.shiftKey){
+    if (document.activeElement === first){ e.preventDefault(); last.focus(); }
+  } else {
+    if (document.activeElement === last){ e.preventDefault(); first.focus(); }
+  }
+}
+// Open modal on + button submit
+newTaskForm.addEventListener('submit', (e) => { e.preventDefault(); openNewTaskModal(); });
+// Enable create button when title present
+newTaskTitleInput && newTaskTitleInput.addEventListener('input', () => {
+  newTaskCreateBtn.disabled = newTaskTitleInput.value.trim().length === 0;
+});
+// Cancel / close actions
+function handleModalCancel(){ closeNewTaskModal(); }
+newTaskCancelBtn && newTaskCancelBtn.addEventListener('click', handleModalCancel);
+newTaskCloseBtn && newTaskCloseBtn.addEventListener('click', handleModalCancel);
+// Close on overlay click (outside panel)
+newTaskModal && newTaskModal.addEventListener('mousedown', (e) => {
+  if (e.target === newTaskModal) closeNewTaskModal();
+});
+// Esc key to close
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !newTaskModal.classList.contains('hidden')) closeNewTaskModal();
+});
+// Submit new task
+newTaskModalForm && newTaskModalForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const title = (prompt('Task title?') || '').trim();
-  if (!title) return;
-  const task = await fetchJSON('/api/tasks', { method: 'POST', body: JSON.stringify({ title }) });
-  state.tasks.unshift({ ...task, latest_update: null, latest_at: null });
-  renderTaskList();
-  updateFilterCounts();
-  updateTasksUpdatedToday();
-  selectTask(task.id);
+  const title = newTaskTitleInput.value.trim();
+  if (!title) return; // safeguard
+  newTaskCreateBtn.disabled = true;
+  try {
+    const task = await fetchJSON('/api/tasks', { method: 'POST', body: JSON.stringify({ title }) });
+    let finalTask = task;
+    const desired = newTaskOutcomeInput.value.trim();
+    if (desired){
+      try {
+        const updated = await fetchJSON(`/api/tasks/${task.id}/outcome`, { method:'PATCH', body: JSON.stringify({ desired_outcome: desired }) });
+        finalTask = updated;
+      } catch(err){ console.error(err); }
+    }
+    state.tasks.unshift({ ...finalTask, latest_update: null, latest_at: null });
+    renderTaskList();
+    updateFilterCounts();
+    updateTasksUpdatedToday();
+    closeNewTaskModal();
+    selectTask(finalTask.id);
+  } catch(err){
+    console.error(err);
+    newTaskCreateBtn.disabled = false;
+  }
 });
 
 function autoResize(el){

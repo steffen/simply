@@ -76,6 +76,27 @@
   </div>
 
     <button id="expand-sidebar-float" type="button" class="expand-sidebar-float" aria-label="Expand task list" title="Expand task list">»</button>
+    <!-- New Task Modal -->
+    <div id="new-task-modal" class="modal-overlay hidden" aria-hidden="true">
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="new-task-modal-title">
+        <form id="new-task-modal-form" autocomplete="off">
+          <div class="modal-header">
+            <h2 id="new-task-modal-title">New Task</h2>
+            <button type="button" class="modal-close-btn" aria-label="Close new task dialog">×</button>
+          </div>
+          <div class="modal-body">
+            <label class="form-label" for="new-task-title">Title</label>
+            <input id="new-task-title" name="title" type="text" maxlength="200" required placeholder="Task title..." />
+            <label class="form-label" for="new-task-outcome">Desired outcome (optional)</label>
+            <input id="new-task-outcome" name="desired_outcome" type="text" maxlength="1000" placeholder="Definition of done..." />
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn subtle" id="cancel-new-task">Cancel</button>
+            <button type="submit" class="btn primary" id="create-new-task" disabled>Create Task</button>
+          </div>
+        </form>
+      </div>
+    </div>
     <!-- Markdown libraries: load BEFORE app.js so they're available during initial render -->
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" integrity="sha256-I0CSExGzCs8IO5IrHg8wABZ8lq/zBtTDUA3axHB3cx0=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js" integrity="sha256-g9RCEYvGCNuTkeRLFioILAWMyJU8SA6RqgDb3m0cDHw=" crossorigin="anonymous"></script>
