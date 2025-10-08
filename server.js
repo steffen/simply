@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS updates (
   task_id INTEGER NOT NULL,
   content TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  /* Track last modification time for an update (mirrors tasks.updated_at) */
+  updated_at DATETIME,
   FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS time_entries (
@@ -70,6 +72,12 @@ try {
   if (!cols.includes('desired_outcome')) {
     db.prepare('ALTER TABLE tasks ADD COLUMN desired_outcome TEXT').run();
   }
+  // Migration for updates.updated_at (added after initial schema)
+  const updateCols = db.prepare('PRAGMA table_info(updates)').all().map(c => c.name);
+  if (!updateCols.includes('updated_at')) {
+    db.prepare('ALTER TABLE updates ADD COLUMN updated_at DATETIME').run();
+    db.prepare('UPDATE updates SET updated_at = created_at WHERE updated_at IS NULL').run();
+  }
 } catch (e) {
   console.error('Migration error:', e);
 }
@@ -83,7 +91,7 @@ const rowToTask = (row) => ({ id: row.id, title: row.title, desired_outcome: row
 function bumpTaskUpdated(id){
   db.prepare('UPDATE tasks SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(id);
 }
-const rowToUpdate = (row) => ({ id: row.id, task_id: row.task_id, content: row.content, created_at: row.created_at });
+const rowToUpdate = (row) => ({ id: row.id, task_id: row.task_id, content: row.content, created_at: row.created_at, updated_at: row.updated_at });
 const rowToTimeEntry = (row) => ({ id: row.id, task_id: row.task_id, start_at: row.start_at, end_at: row.end_at, duration_seconds: row.duration_seconds, running: !row.end_at });
 const rowToPlanItem = (row) => ({ id: row.id, plan_date: row.plan_date, content: row.content, done: !!row.done, position: row.position, created_at: row.created_at, updated_at: row.updated_at });
 
@@ -107,11 +115,11 @@ app.get('/api/tasks', (req, res) => {
     ORDER BY COALESCE(updated_at, created_at) DESC, id DESC
   `).all();
   const latestStmt = db.prepare(`
-    SELECT content, created_at FROM updates WHERE task_id = ? ORDER BY created_at DESC, id DESC LIMIT 1
+    SELECT content, updated_at, created_at FROM updates WHERE task_id = ? ORDER BY COALESCE(updated_at, created_at) DESC, id DESC LIMIT 1
   `);
   const withPreview = tasks.map((t) => {
     const latest = latestStmt.get(t.id);
-    return { ...rowToTask(t), latest_update: latest ? latest.content : null, latest_at: latest ? latest.created_at : null };
+    return { ...rowToTask(t), latest_update: latest ? latest.content : null, latest_at: latest ? (latest.updated_at || latest.created_at) : null };
   });
   res.json(withPreview);
 });
@@ -287,7 +295,7 @@ app.post('/api/tasks/:id/updates', (req, res) => {
   if (content.length > MAX_UPDATE_LENGTH) {
     return res.status(400).json({ error: `Content too long (max ${MAX_UPDATE_LENGTH} chars)` });
   }
-  const info = db.prepare('INSERT INTO updates (task_id, content) VALUES (?, ?)').run(id, content.trim());
+  const info = db.prepare('INSERT INTO updates (task_id, content, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)').run(id, content.trim());
   bumpTaskUpdated(id);
   const update = db.prepare('SELECT * FROM updates WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json(rowToUpdate(update));
@@ -305,7 +313,7 @@ app.put('/api/updates/:id', (req, res) => {
   if (content.length > MAX_UPDATE_LENGTH) {
     return res.status(400).json({ error: `Content too long (max ${MAX_UPDATE_LENGTH} chars)` });
   }
-  db.prepare('UPDATE updates SET content = ? WHERE id = ?').run(content.trim(), id);
+  db.prepare('UPDATE updates SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(content.trim(), id);
   bumpTaskUpdated(existing.task_id);
   const updated = db.prepare('SELECT * FROM updates WHERE id = ?').get(id);
   res.json(rowToUpdate(updated));

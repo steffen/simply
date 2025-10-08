@@ -487,13 +487,14 @@ function renderUpdates(items){
       const li = document.createElement('li');
       li.className = 'update';
       li.dataset.id = String(item.id);
-      const abs = formatDate(item.created_at);
-      const rel = relativeTime(item.created_at);
+      const baseIso = item.updated_at || item.created_at;
+      const abs = formatDate(baseIso);
+      const rel = relativeTime(baseIso);
       li.innerHTML = `
-        <div class="update-body markdown-body">${markdownToHtml(item.content)}</div>
-        <div class="update-meta-line">
-          <time title="${abs}" datetime="${item.created_at}">${rel}</time>
-          <button class="mini-delete-update" title="Delete update" aria-label="Delete update">×</button>
+        <div class=\"update-body markdown-body\">${markdownToHtml(item.content)}</div>
+        <div class=\"update-meta-line\">
+          <time title=\"${abs}\" datetime=\"${baseIso}\">${rel}</time>
+          <button class=\"mini-delete-update\" title=\"Delete update\" aria-label=\"Delete update\">×</button>
         </div>
       `;
       const delBtn = li.querySelector('.mini-delete-update');
@@ -890,9 +891,9 @@ newUpdateForm.addEventListener('submit', async (e) => {
   const idx = state.tasks.findIndex(t => t.id === state.selectedId);
   if (idx >= 0) {
     state.tasks[idx].latest_update = update.content;
-    state.tasks[idx].latest_at = update.created_at;
-    // updated_at will be refreshed on refetch, but optimistically set
-    state.tasks[idx].updated_at = update.created_at;
+    state.tasks[idx].latest_at = update.updated_at || update.created_at;
+    // updated_at will be refreshed on refetch, but optimistically set to update.updated_at
+    state.tasks[idx].updated_at = update.updated_at || update.created_at;
   }
   renderTaskList();
   updateTasksUpdatedToday();
@@ -1022,7 +1023,7 @@ async function startEditUpdate(updateId){
       const idx = state.tasks.findIndex(t => t.id === state.selectedId);
       if (idx >= 0) {
         state.tasks[idx].latest_update = entries[0].content;
-        state.tasks[idx].updated_at = entries[0].created_at; // optimistic
+        state.tasks[idx].updated_at = entries[0].updated_at || entries[0].created_at; // optimistic to last modified
       }
       renderTaskList();
     }
