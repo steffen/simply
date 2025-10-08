@@ -342,3 +342,18 @@ body.modal-open{ overflow:hidden; }
 .form-label{ font-size:12px; text-transform:uppercase; letter-spacing:.6px; font-weight:600; color: var(--muted); }
 .modal-footer{ display:flex; gap:10px; justify-content:flex-end; padding:14px 18px 18px; border-top:1px solid var(--border); }
 .modal-panel input[type="text"]:focus{ box-shadow: var(--focus-ring); }
+
+/* --- Markdown List Bullet Styling --------------------------------------- */
+/* Light gray bullets to match muted text; progressive shapes for nesting. */
+.markdown-body ul li::marker,
+.markdown-body ol li::marker{ color: var(--muted); }
+
+/* Shape progression only for unordered lists (disc -> circle -> square) */
+.markdown-body ul{ list-style: disc; }
+.markdown-body ul ul{ list-style: circle; }
+.markdown-body ul ul ul{ list-style: square; }
+
+/* Slightly tighter nested list spacing (inherit earlier base rules) */
+.markdown-body li > ul,
+.markdown-body li > ol{ margin-top:4px; }
+
