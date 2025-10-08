@@ -825,9 +825,12 @@ function autoResize(el){
   el.style.height = Math.min(el.scrollHeight, 220) + 'px';
 }
 
-// Handle Shift+Enter for newline, Enter to submit
+// Update entry key handling:
+//  - Enter inserts newline (default behavior)
+//  - Cmd+Enter (Mac) OR Ctrl+Enter (fallback/other platforms) submits the update
+//  - Shift+Enter remains a newline (no special handling needed)
 newUpdateInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
     e.preventDefault();
     newUpdateForm.requestSubmit();
   }
@@ -980,6 +983,7 @@ async function startEditUpdate(updateId){
   const saveBtn = document.createElement('button');
   saveBtn.className = 'mini-btn save';
   saveBtn.textContent = 'Save';
+  saveBtn.title = 'Cmd+Enter (Mac) or Ctrl+Enter to save; Esc to cancel';
   const cancelBtn = document.createElement('button');
   cancelBtn.className = 'mini-btn cancel';
   cancelBtn.textContent = 'Cancel';
@@ -992,6 +996,7 @@ async function startEditUpdate(updateId){
   const resize = () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 300) + 'px'; };
   resize();
   input.addEventListener('input', resize);
+  input.title = 'Cmd+Enter (Mac) or Ctrl+Enter to save; Esc to cancel';
   input.addEventListener('paste', (e) => handleMarkdownLinkPaste(e, input));
 
   const cleanup = () => {
@@ -1001,8 +1006,9 @@ async function startEditUpdate(updateId){
 
   cancelBtn.addEventListener('click', () => cleanup());
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') cleanup();
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveBtn.click(); }
+    if (e.key === 'Escape') { cleanup(); return; }
+    // Enter alone -> newline (default). Cmd/Ctrl+Enter saves. Shift+Enter newline.
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveBtn.click(); }
   });
   saveBtn.addEventListener('click', async () => {
     const content = input.value.trim();
